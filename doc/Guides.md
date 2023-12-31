@@ -1,0 +1,191 @@
+# PixelFlow User Guide
+
+## Overview
+
+PixelFlow is a script-based application designed for conducting flow simulations. It operates by utilizing continuous data within the range of 0 to 1 as input for defining solid boundary conditions.
+
+## Table of Contents
+
+- [PixelFlow User Guide](#pixelflow-user-guide)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Getting Started](#getting-started)
+    - [Setting up the Environment](#setting-up-the-environment)
+    - [Editing Configuration](#editing-configuration)
+    - [Running Simulations](#running-simulations)
+  - [Configuring Simulations](#configuring-simulations)
+    - [\&physical Section](#physical-section)
+    - [\&file\_control Section](#file_control-section)
+    - [\&grid\_control Section](#grid_control-section)
+    - [\&porosity\_control Section](#porosity_control-section)
+    - [\&calculation\_method Section](#calculation_method-section)
+    - [\&directory\_control Section](#directory_control-section)
+  - [References](#references)
+  - [Example](#example)
+    - [Running a Test Case](#running-a-test-case)
+    - [Expected Output](#expected-output)
+
+## Installation
+
+1. Open a terminal and navigate to the desired working directory.
+
+2. Clone the repository from GitHub:
+
+    ```bash
+    git clone https://github.com/nobu-n2002/PixelFlow.git
+    ```
+
+3. Move into the application directory:
+
+    ```bash
+    cd PixelFlow
+    ```
+
+4. Make the initialization script executable:
+
+    ```bash
+    chmod +x init.sh
+    ```
+
+5. Run the initialization script:
+
+    ```bash
+    sh init.sh
+    ```
+
+6. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
+
+7. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
+
+## Getting Started
+
+### Setting up the Environment
+
+1. Place the solid boundary information file (`.csv`) in the `data/` directory.
+
+### Editing Configuration
+
+1. Open the `config/controlDict.txt` file in a text editor. For detailed information on each parameter and how to configure your simulations, refer to the [Configuring Simulations](#configuring-simulations) section.
+
+2. Edit the variables according to your simulation requirements.
+
+    ```plaintext
+    &physical
+    xnue = 0.025000
+    # ... other parameters ...
+    /
+
+    &file_control
+    istep_out = 10001
+    /
+    # ... other sections ...
+    ```
+
+3. Save the changes and close the file.
+
+### Running Simulations
+
+1. Open the `run.sh` script in a text editor.
+
+2. Locate the `DIMENSION` variable within the script and set it to either 2 or 3.
+
+    ```bash
+    # init.sh
+
+    # Set the dimension to 2 or 3
+    DIMENSION=2
+    ```
+
+3. Run the simulation script:
+
+    ```bash
+    sh run.sh
+    ```
+
+4. View the progress in the `logs/` directory, and the output in the `{output_folder}/` directory.
+
+## Configuring Simulations
+
+The `config/controlDict.txt` file contains parameters that define the properties of the simulation. Here's a breakdown of the important parameters:
+
+### &physical Section
+
+- **`xnue`**: Kinematic viscosity of the fluid in [m^2/s].
+- **`xlamda`**: Second Kinematic viscosity of the fluid in[m^2/s].
+- **`density`**: Density of the fluid in [kg/m^3].
+- **`width`**, **`height`**, **`depth`**: The simulation domain in [m].
+- **`time`**: Total simulation time in [s].
+- **`inlet_velocity`**: Inlet velocity of the fluid in [m/s].
+- **`outlet_pressure`**: Outlet pressure in [gauge].
+- **`AoA`**: Angle of Attack in [degree].
+
+### &file_control Section
+
+- **`istep_out`**: Output interval for saving results, specified as the number of time steps.
+
+### &grid_control Section
+
+- **`istep_max`**: Maximum number of time steps for the simulation.
+
+### &porosity_control Section
+
+- **`thickness`**: Thickness of boundary region ($\Delta/dx$).
+
+### &calculation_method Section
+
+- **`nonslip`**: Specify `.true.` for no-slip conditions or `.false.` for slip conditions.
+
+### &directory_control Section
+
+- **`output_folder`**: Name of the folder where simulation results will be stored.
+- **`csv_file`**: Path to the solid boundary information file in CSV format.
+
+Adjust these parameters according to your simulation requirements. The `output_folder` will be created to store the simulation results, and the `csv_file` should point to the CSV file containing solid boundary information.
+
+
+
+## References
+
+[1] Oshima.N, A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Mechanical Engineering Journal. Vol.18, No.4 (2023)
+
+[2] 大島, 流れの数値解析:固体境界が埋め込まれた改良ナビエ・ストークス方程式の解法, 北海道大学学術成果コレクション(HUBCAP), 資源タイプsoftware (2023), URL: http://hdl.handle.net/2115/89344
+
+## Example
+
+### Running a Test Case
+
+To ensure that the application is set up correctly, you can run a provided test case located in the `test/` folder. Follow these steps:
+
+1. Open a terminal and navigate to the application directory:
+
+    ```bash
+    cd PixelFlow
+    ```
+
+2. Run the provided test script:
+
+    ```bash
+    sh test/init.sh
+    ```
+
+3. Locate the `DIMENSION` variable within the script and set it to either 2 or 3.
+
+    ```bash
+    # run.sh
+
+    # Set the DIMENSION variable to 2 for a 2D cylindrical case
+    # Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
+    DIMENSION=2
+    ```
+
+4. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
+
+### Expected Output
+
+Upon successful execution of the test case, you should observe the following:
+
+- A log file in the `logs/` directory (e.g., `logs/runlog_test.txt`).
+- Output files in the `test2d` or `test3d` directory.
+
+Feel free to explore the contents of the log file and output folder to verify that the simulation ran as expected.
