@@ -5,6 +5,8 @@ DIMENSION=3
 # Make directory
 mkdir -p bin data config etc
 
+unzip data.zip
+
 if [ "$DIMENSION" -eq 3 ]; then
     echo "Making 3d project"
     sh ./scripts/build3d.sh
