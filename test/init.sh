@@ -3,7 +3,7 @@
 DIMENSION=2
 
 # make directory
-mkdir -p bin data config etc
+mkdir -p bin config etc
 
 
 # target directory
@@ -14,7 +14,7 @@ if [ ! -d "$TARGET_DIR" ]; then
     echo "Directory '$TARGET_DIR' not found. Extracting data.zip..."
 
     # unzip data.zip
-    unzip data.zip -d "$TARGET_DIR"
+    unzip data.zip
 
     echo "Extraction complete."
 else
