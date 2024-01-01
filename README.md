@@ -279,15 +279,7 @@ To ensure that the application is set up correctly, you can run a provided test 
    ├── logs
    │   └── runlog_*.txt
    ├── run.sh
-   ├── scripts
-   │   ├── SQUID
-   │   │   ├── qcompile.sh
-   │   │   └── qrun.sh
-   │   ├── build2d.sh
-   │   ├── build3d.sh
-   │   ├── cleanAll.sh
-   │   ├── test2d.sh
-   │   └── test3d.sh
+   ├── scripts/
    ├── src
    │   ├── ibm_2d.f90
    │   └── ibm_3d.f90
