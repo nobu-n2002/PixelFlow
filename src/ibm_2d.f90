@@ -587,28 +587,15 @@ program main
   ! end do
   ! end do
   
-  ! do i = 1, m
-  ! do j = 1, n
-  ! p(i,j) = (  bb(i,j)					&
-  !           - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
-  !           - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
-  !          /ap(i,j)    * relux_factor			&
-  !         + p_old(i,j) * (1.-relux_factor)
-  ! end do
-  ! end do
-  
-  ! ==
   do i = 1, m
   do j = 1, n
   p(i,j) = (  bb(i,j)					&
-            - ae(i,j)*p(i+1,j) -aw(i,j)*p(i-1,j)	&
-            - an(i,j)*p(i,j+1) -as(i,j)*p(i,j-1) )	&
-            /ap(i,j)    * relux_factor			&
-          + p(i,j) * (1.-relux_factor)
+            - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
+            - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
+           /ap(i,j)    * relux_factor			&
+          + p_old(i,j) * (1.-relux_factor)
   end do
   end do
-  ! ==
-  
   
   end do
   
@@ -896,18 +883,18 @@ program main
   ! local variables
   !real,dimension(0:md,0:nd)::	distance
   integer:: x, y, z
-  real:: val
+  real:: val, threshold
   real:: cfl_no, pecret_no, diffusion_factor, reynolds_no
   real:: pai, distance, center_x, center_y, radius
   integer::	i, j
-  real, parameter::     small=1.e-3, big=1.e6, zero=0.
+  real, parameter:: small=1.e-6, big=1.e6, zero=0.
   ! ---
   
   ! ----------------
   ! namelist
   ! by Nobuto Nakamichi 4/7/2023
   namelist /grid_control/istep_max
-  namelist /porosity_control/thickness
+  namelist /porosity_control/thickness, threshold
   namelist /directory_control/csv_file, output_folder
   open(11,file="config/controlDict.txt",status="old",action="read")
   read(11,nml=grid_control)
@@ -923,7 +910,7 @@ program main
   
   do i=1,m*n
     read(52,*) x, y, z, val
-    porosity(x,y) = max(val, small)
+    porosity(x,y) = max(val, threshold)
   end do
   close(52)
   
@@ -958,29 +945,6 @@ program main
   do j = 0, n+1
   yp(j) = dy * real(j-1) - height*0.5
   end do
-  
-  ! set porosity (fluid area difinition) by distance function data
-  !
-  
-  ! set porosity (fluid area difinition)
-  ! pai=atan(1.0)*4.
-  ! center_x=0.*width
-  ! center_y=0.*height
-  
-  do i = 1, m
-  do j = 1, n
-  ! distance=(sqrt((xp(i)-center_x)**2+(yp(j)-center_y)**2)-radius)
-  ! porosity(i,j) = max(small, 0.5*tanh(distance/(thickness*dx))+0.5)
-  ! porosity(i,j) = 0.5*tanh(distance/(thickness*dx))*(1.-small*1.)+0.5*(1.+small*1.)
-  porosity(i,j) = max(small, porosity(i,j))
-  end do
-  end do
-  
-  ! default: far field condtion in x-direction
-  !do j = 1, n
-  ! porosity(0,j)   = 1.
-  ! porosity(m+1,j) = 1.
-  !end do
   
   ! default: outlet condtion in x-direction
   do j = 1, n+1

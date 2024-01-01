@@ -22,6 +22,7 @@ istep_max       = 10000
 /
 &porosity_control
 thickness       = 2.0
+threshold       = 1.0e-3
 /
 &calculation_method
 nonslip         = .true.  ! .ture.:No-slip cond., .false.:Slip cond.
