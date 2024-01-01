@@ -257,7 +257,56 @@ To ensure that the application is set up correctly, you can run a provided test 
     ```
 
 7. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
-8. To perform computations for a 3D test case, set DIMENSION=3 in both init.sh and run.sh, and execute the following commands in sequence:
+8. Upon successful completion of the 2D test case, your directory structure should resemble the following:
+
+   ```plaintext
+   .
+   ├── bin
+   │   └── ibm2
+   ├── config
+   │   └── controlDict.txt
+   ├── data
+   │   ├── circle.csv
+   │   └── stanford_dragon.csv
+   ├── data.zip
+   ├── etc
+   │   ├── divergent.dat
+   │   ├── grid.dat
+   │   ├── solution_uvp.dat
+   │   └── surface_profile.dat
+   ├── init.sh
+   ├── logs
+   │   └── runlog_*.txt
+   ├── run.sh
+   ├── scripts
+   │   ├── SQUID
+   │   │   ├── qcompile.sh
+   │   │   └── qrun.sh
+   │   ├── build2d.sh
+   │   ├── build3d.sh
+   │   ├── cleanAll.sh
+   │   ├── test2d.sh
+   │   └── test3d.sh
+   ├── src
+   │   ├── ibm_2d.f90
+   │   └── ibm_3d.f90
+   └── test2d
+       └── output_paraview.vtk
+   ```
+
+9. To confirm the successful execution of the 2D test case, follow these steps:
+
+   1. Locate the `output_paraview.vtk` file in the `test2d` directory.
+
+   2. Open the file using visualization software such as Paraview.
+
+      - If you can visualize the results in Paraview without any issues, it indicates the completion of the test case execution.
+
+   Congratulations! You have successfully completed the 2D test case. If you encounter any difficulties or have further questions, please refer to the provided documentation or seek assistance from our support channels.
+
+   Thank you for your efforts!
+
+10. To perform computations for a 3D test case, set DIMENSION=3 in both init.sh and run.sh, and execute the following commands in sequence:
 
     ```bash
     # test/init.sh
@@ -275,13 +324,13 @@ To ensure that the application is set up correctly, you can run a provided test 
     DIMENSION=3
     ```
 
-   ```bash
-   sh init.sh
-   ```
+    ```bash
+    sh init.sh
+    ```
 
-   ```bash
-   sh run.sh
-   ```
+    ```bash
+    sh run.sh
+    ```
 
 ### Expected Output
 

@@ -262,6 +262,57 @@ istep_out = 10001
 <p>Monitor the progress in the <code>logs/</code> directory and check for successful execution in the <code>{output_folder}/</code> directory.</p>
 </li>
 <li>
+<p>Upon successful completion of the 2D test case, your directory structure should resemble the following:</p>
+<pre data-role="codeBlock" data-info="plaintext" class="language-plaintext plaintext"><code>.
+├── bin
+│   └── ibm2
+├── config
+│   └── controlDict.txt
+├── data
+│   ├── circle.csv
+│   └── stanford_dragon.csv
+├── data.zip
+├── etc
+│   ├── divergent.dat
+│   ├── grid.dat
+│   ├── solution_uvp.dat
+│   └── surface_profile.dat
+├── init.sh
+├── logs
+│   └── runlog_*.txt
+├── run.sh
+├── scripts
+│   ├── SQUID
+│   │   ├── qcompile.sh
+│   │   └── qrun.sh
+│   ├── build2d.sh
+│   ├── build3d.sh
+│   ├── cleanAll.sh
+│   ├── test2d.sh
+│   └── test3d.sh
+├── src
+│   ├── ibm_2d.f90
+│   └── ibm_3d.f90
+└── test2d
+    └── output_paraview.vtk
+</code></pre></li>
+<li>
+<p>To confirm the successful execution of the 2D test case, follow these steps:</p>
+<ol>
+<li>
+<p>Locate the <code>output_paraview.vtk</code> file in the <code>test2d</code> directory.</p>
+</li>
+<li>
+<p>Open the file using visualization software such as Paraview.</p>
+<ul>
+<li>If you can visualize the results in Paraview without any issues, it indicates the completion of the test case execution.</li>
+</ul>
+</li>
+</ol>
+<p>Congratulations! You have successfully completed the 2D test case. If you encounter any difficulties or have further questions, please refer to the provided documentation or seek assistance from our support channels.</p>
+<p>Thank you for your efforts!</p>
+</li>
+<li>
 <p>To perform computations for a 3D test case, set DIMENSION=3 in both <a href="http://init.sh">init.sh</a> and <a href="http://run.sh">run.sh</a>, and execute the following commands in sequence:</p>
 <pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># test/init.sh</span>
 
