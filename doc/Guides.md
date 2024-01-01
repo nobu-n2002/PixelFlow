@@ -2,12 +2,28 @@
 
 ## Overview
 
-PixelFlow is a script-based application designed for conducting flow simulations. It operates by utilizing continuous data within the range of 0 to 1 as input for defining solid boundary conditions.
+This is an implementation based on the paper "A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation" by Nobuyuki OSHIMA, published in the Mechanical Engineering Journal, Volume 18, Number 4 (2023).
+
+## Citing A Novel approach for wall-boundary immersed flow simulation
+
+For comprehensive insights into the proposed methodology and findings presented in our work, please consider referencing the [paper](https://doi.org/10.1299/jfst.2023jfst0034):
+
+```bibtex
+@InProceedings{Oshima_2023_MEJ,
+  author    = {Nobuyuki OSHIMA},
+  title     = {A Novel Approach for Wall-boundary Immersed Flow Simulation: Proposal of Modified Navier-Stokes Equation},
+  booktitle = {Mechanical Engineering Journal},
+  volume    = {18},
+  number    = {4},
+  year      = {2023},
+}
+```
 
 ## Table of Contents
 
 - [PixelFlow User Guide](#pixelflow-user-guide)
   - [Overview](#overview)
+  - [Citing A Novel approach for wall-boundary immersed flow simulation](#citing-a-novel-approach-for-wall-boundary-immersed-flow-simulation)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Getting Started](#getting-started)
@@ -54,9 +70,29 @@ PixelFlow is a script-based application designed for conducting flow simulations
     sh init.sh
     ```
 
-6. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
+6. **Check the `bin` Folder:**
+   - Upon a successful build, executable files are generated in the `bin` folder.
+   - Open a terminal or command prompt and run the following command to verify the presence of the generated executable file(s) in the `bin` folder.
 
-7. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
+     ```bash
+     ls bin
+     ```
+
+   - Ensure that the application's executable file is present in the `bin` folder.
+
+7. **Verify the `config` Folder:**
+   - Proper configuration is crucial for the application. During the build, a configuration file named `controlDict.txt` should be created in the `config` folder.
+   - Open a terminal or command prompt and run the following command to confirm the existence of the `controlDict.txt` file in the `config` folder.
+
+     ```bash
+     ls config
+     ```
+
+   - Confirm that the `controlDict.txt` file is present in the `config` folder.
+
+8. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
+
+9. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
 
 ## Getting Started
 
@@ -163,23 +199,35 @@ To ensure that the application is set up correctly, you can run a provided test 
     cd PixelFlow
     ```
 
-2. Run the provided test script:
+2. Run the provided test script and grant execution permissions to `init.sh` and `run.sh`:
 
     ```bash
-    sh test/init.sh
+    cd test
+    sh init.sh
+    sh run.sh
+    chmod +x init.sh run.sh
     ```
 
-3. Locate the `DIMENSION` variable within the script and set it to either 2 or 3.
+3. Confirm the creation of the executable files in the `bin` folder and the `controlDict.txt` file in the `config` folder:
 
     ```bash
-    # run.sh
-
-    # Set the DIMENSION variable to 2 for a 2D cylindrical case
-    # Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
-    DIMENSION=2
+    ls bin/ibm2 bin/ibm3 config/controlDict.txt
     ```
 
-4. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
+4. Grant execution permissions to the executable files in the `bin` folder:
+
+    ```bash
+    chmod +x bin/ibm2 bin/ibm3
+    ```
+
+5. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
+
+6. To compute a 3D test case, set DIMENSION=3 in both init.sh and run.sh, and execute the following commands:
+
+   ```bash
+   sh init.sh
+   sh run.sh
+   ```
 
 ### Expected Output
 

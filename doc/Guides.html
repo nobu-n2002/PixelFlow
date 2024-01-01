@@ -26,12 +26,23 @@
       
 <h1 id="pixelflow-user-guide">PixelFlow User Guide </h1>
 <h2 id="overview">Overview </h2>
-<p>PixelFlow is a script-based application designed for conducting flow simulations. It operates by utilizing continuous data within the range of 0 to 1 as input for defining solid boundary conditions.</p>
-<h2 id="table-of-contents">Table of Contents </h2>
+<p>This is an implementation based on the paper "A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation" by Nobuyuki OSHIMA, published in the Mechanical Engineering Journal, Volume 18, Number 4 (2023).</p>
+<h2 id="citing-a-novel-approach-for-wall-boundary-immersed-flow-simulation">Citing A Novel approach for wall-boundary immersed flow simulation </h2>
+<p>For comprehensive insights into the proposed methodology and findings presented in our work, please consider referencing the <a href="https://doi.org/10.1299/jfst.2023jfst0034">paper</a>:</p>
+<pre data-role="codeBlock" data-info="bibtex" class="language-bibtex bibtex"><code>@InProceedings{Oshima_2023_MEJ,
+  author    = {Nobuyuki OSHIMA},
+  title     = {A Novel Approach for Wall-boundary Immersed Flow Simulation: Proposal of Modified Navier-Stokes Equation},
+  booktitle = {Mechanical Engineering Journal},
+  volume    = {18},
+  number    = {4},
+  year      = {2023},
+}
+</code></pre><h2 id="table-of-contents">Table of Contents </h2>
 <ul>
 <li><a href="#pixelflow-user-guide">PixelFlow User Guide</a>
 <ul>
 <li><a href="#overview">Overview</a></li>
+<li><a href="#citing-a-novel-approach-for-wall-boundary-immersed-flow-simulation">Citing A Novel approach for wall-boundary immersed flow simulation</a></li>
 <li><a href="#table-of-contents">Table of Contents</a></li>
 <li><a href="#installation">Installation</a></li>
 <li><a href="#getting-started">Getting Started</a>
@@ -82,6 +93,36 @@
 <p>Run the initialization script:</p>
 <pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">sh</span> init.sh
 </code></pre></li>
+<li>
+<p><strong>Check the <code>bin</code> Folder:</strong></p>
+<ul>
+<li>
+<p>Upon a successful build, executable files are generated in the <code>bin</code> folder.</p>
+</li>
+<li>
+<p>Open a terminal or command prompt and run the following command to verify the presence of the generated executable file(s) in the <code>bin</code> folder.</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">ls</span> bin
+</code></pre></li>
+<li>
+<p>Ensure that the application's executable file is present in the <code>bin</code> folder.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Verify the <code>config</code> Folder:</strong></p>
+<ul>
+<li>
+<p>Proper configuration is crucial for the application. During the build, a configuration file named <code>controlDict.txt</code> should be created in the <code>config</code> folder.</p>
+</li>
+<li>
+<p>Open a terminal or command prompt and run the following command to confirm the existence of the <code>controlDict.txt</code> file in the <code>config</code> folder.</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">ls</span> config
+</code></pre></li>
+<li>
+<p>Confirm that the <code>controlDict.txt</code> file is present in the <code>config</code> folder.</p>
+</li>
+</ul>
+</li>
 <li>
 <p>Follow the steps in the <a href="#getting-started">Getting Started</a> section to set up the environment and configure the simulation.</p>
 </li>
@@ -182,20 +223,28 @@ istep_out = 10001
 <pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> PixelFlow
 </code></pre></li>
 <li>
-<p>Run the provided test script:</p>
-<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">sh</span> test/init.sh
+<p>Run the provided test script and grant execution permissions to <code>init.sh</code> and <code>run.sh</code>:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token builtin class-name">cd</span> <span class="token builtin class-name">test</span>
+<span class="token function">sh</span> init.sh
+<span class="token function">sh</span> run.sh
+<span class="token function">chmod</span> +x init.sh run.sh
 </code></pre></li>
 <li>
-<p>Locate the <code>DIMENSION</code> variable within the script and set it to either 2 or 3.</p>
-<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># run.sh</span>
-
-<span class="token comment"># Set the DIMENSION variable to 2 for a 2D cylindrical case</span>
-<span class="token comment"># Set the DIMENSION variable to 3 for a 3D Stanford Dragon case</span>
-<span class="token assign-left variable">DIMENSION</span><span class="token operator">=</span><span class="token number">2</span>
+<p>Confirm the creation of the executable files in the <code>bin</code> folder and the <code>controlDict.txt</code> file in the <code>config</code> folder:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">ls</span> bin/ibm2 bin/ibm3 config/controlDict.txt
+</code></pre></li>
+<li>
+<p>Grant execution permissions to the executable files in the <code>bin</code> folder:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">chmod</span> +x bin/ibm2 bin/ibm3
 </code></pre></li>
 <li>
 <p>Monitor the progress in the <code>logs/</code> directory and check for successful execution in the <code>{output_folder}/</code> directory.</p>
 </li>
+<li>
+<p>To compute a 3D test case, set DIMENSION=3 in both <a href="http://init.sh">init.sh</a> and <a href="http://run.sh">run.sh</a>, and execute the following commands:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">sh</span> init.sh
+<span class="token function">sh</span> run.sh
+</code></pre></li>
 </ol>
 <h3 id="expected-output">Expected Output </h3>
 <p>Upon successful execution of the test case, you should observe the following:</p>
