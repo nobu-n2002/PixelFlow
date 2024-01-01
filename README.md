@@ -146,6 +146,25 @@ For comprehensive insights into the proposed methodology and findings presented 
     ```
 
 4. View the progress in the `logs/` directory, and the output in the `{output_folder}/` directory.
+5. If you need to forcibly stop the computation midway, you can check the running processes by entering ps in the terminal. For example, the output might look like this:
+
+    ```bash
+    ps
+    ```
+
+   ```bash
+   Copy code
+     PID TTY          TIME CMD
+   16149 pts/6    00:00:00 bash
+   18326 pts/6    00:38:34 ibm2
+   18931 pts/6    00:00:00 ps
+   ```
+
+   To stop the execution of ibm2, input kill {PID} in the terminal. This will terminate the running process of ibm2.
+
+    ```bash
+    kill 18326
+    ```
 
 ## Configuring Simulations
 
@@ -207,6 +226,9 @@ To ensure that the application is set up correctly, you can run a provided test 
 
     ```bash
     cd test
+    ```
+
+    ```bash
     chmod +x init.sh run.sh
     ```
 
@@ -219,13 +241,13 @@ To ensure that the application is set up correctly, you can run a provided test 
 4. Confirm the creation of the executable files in the `bin` folder and the `controlDict.txt` file in the `config` folder:
 
     ```bash
-    ls bin/ibm2 bin/ibm3 config/controlDict.txt
+    ls bin/ibm2 config/controlDict.txt
     ```
 
 5. Grant execution permissions to the executable files in the `bin` folder:
 
     ```bash
-    chmod +x bin/ibm2 bin/ibm3
+    chmod +x bin/ibm2
     ```
 
 6. Run the simulation script:
@@ -235,6 +257,31 @@ To ensure that the application is set up correctly, you can run a provided test 
     ```
 
 7. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
+8. To perform computations for a 3D test case, set DIMENSION=3 in both init.sh and run.sh, and execute the following commands in sequence:
+
+    ```bash
+    # test/init.sh
+
+    # Set the DIMENSION variable to 2 for a 2D cylindrical case
+    # Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
+    DIMENSION=3
+    ```
+
+    ```bash
+    # test/run.sh
+
+    # Set the DIMENSION variable to 2 for a 2D cylindrical case
+    # Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
+    DIMENSION=3
+    ```
+
+   ```bash
+   sh init.sh
+   ```
+
+   ```bash
+   sh run.sh
+   ```
 
 ### Expected Output
 

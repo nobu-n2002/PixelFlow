@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Set the DIMENSION variable to 2 for a 2D cylindrical case
+# Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
 DIMENSION=2
 
 # make directory
