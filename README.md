@@ -61,7 +61,7 @@ For comprehensive insights into the proposed methodology and findings presented 
 4. Make the initialization script executable:
 
     ```bash
-    chmod +x init.sh
+    chmod +x init.sh run.sh
     ```
 
 5. Run the initialization script:
@@ -70,7 +70,7 @@ For comprehensive insights into the proposed methodology and findings presented 
     sh init.sh
     ```
 
-6. **Check the `bin` Folder:**
+6. Check the `bin` Folder:
    - Upon a successful build, executable files are generated in the `bin` folder.
    - Open a terminal or command prompt and run the following command to verify the presence of the generated executable file(s) in the `bin` folder.
 
@@ -80,7 +80,13 @@ For comprehensive insights into the proposed methodology and findings presented 
 
    - Ensure that the application's executable file is present in the `bin` folder.
 
-7. **Verify the `config` Folder:**
+7. Grant execution permissions to the executable files in the `bin` folder:
+
+    ```bash
+    chmod +x bin/ibm2 bin/ibm3
+    ```
+
+8. Verify the `config` Folder:
    - Proper configuration is crucial for the application. During the build, a configuration file named `controlDict.txt` should be created in the `config` folder.
    - Open a terminal or command prompt and run the following command to confirm the existence of the `controlDict.txt` file in the `config` folder.
 
@@ -90,10 +96,9 @@ For comprehensive insights into the proposed methodology and findings presented 
 
    - Confirm that the `controlDict.txt` file is present in the `config` folder.
 
+9. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
 
-8. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
-
-9. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
+10. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
 
 ## Getting Started
 
@@ -204,24 +209,34 @@ To ensure that the application is set up correctly, you can run a provided test 
 
     ```bash
     cd test
-    sh init.sh
-    sh run.sh
     chmod +x init.sh run.sh
     ```
 
-3. Confirm the creation of the executable files in the `bin` folder and the `controlDict.txt` file in the `config` folder:
+3. Run the initialization script:
+
+    ```bash
+    init.sh
+    ```
+
+4. Confirm the creation of the executable files in the `bin` folder and the `controlDict.txt` file in the `config` folder:
 
     ```bash
     ls bin/ibm2 bin/ibm3 config/controlDict.txt
     ```
 
-4. Grant execution permissions to the executable files in the `bin` folder:
+5. Grant execution permissions to the executable files in the `bin` folder:
 
     ```bash
     chmod +x bin/ibm2 bin/ibm3
     ```
 
-5. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
+6. Run the simulation script:
+
+    ```bash
+    sh run.sh
+    ```
+
+7. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
 
 ### Expected Output
 
