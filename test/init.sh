@@ -1,11 +1,25 @@
 #!/bin/bash
 
-DIMENSION=3
+DIMENSION=2
 
-# Make directory
+# make directory
 mkdir -p bin data config etc
 
-unzip data.zip
+
+# target directory
+TARGET_DIR="data"
+
+# if target directory is not exist
+if [ ! -d "$TARGET_DIR" ]; then
+    echo "Directory '$TARGET_DIR' not found. Extracting data.zip..."
+
+    # unzip data.zip
+    unzip data.zip -d "$TARGET_DIR"
+
+    echo "Extraction complete."
+else
+    echo "Directory '$TARGET_DIR' already exists. No need to extract."
+fi
 
 if [ "$DIMENSION" -eq 3 ]; then
     echo "Making 3d project"

@@ -1,3 +1,7 @@
+#!/bin/bash
+
+# Generate controlDict.txt
+cat <<EOF > config/controlDict.txt
 &physical
 xnue            = 0.025000  ! [m2/s]
 xlamda          = 0.000000  ! [m2/s]
@@ -26,3 +30,7 @@ nonslip         = .true.  ! .ture.:No-slip cond., .false.:Slip cond.
 output_folder   = "test2d"
 csv_file        = "data/circle.csv"
 /
+
+EOF
+
+echo "controlDict.txt generated in config directory."
