@@ -185,8 +185,6 @@ The `config/controlDict.txt` file contains parameters that define the properties
 
 Adjust these parameters according to your simulation requirements. The `output_folder` will be created to store the simulation results, and the `csv_file` should point to the CSV file containing solid boundary information.
 
-
-
 ## References
 
 [1] Oshima.N, A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Mechanical Engineering Journal. Vol.18, No.4 (2023)
@@ -215,7 +213,7 @@ To ensure that the application is set up correctly, you can run a provided test 
 3. Run the initialization script:
 
     ```bash
-    init.sh
+    sh init.sh
     ```
 
 4. Confirm the creation of the executable files in the `bin` folder and the `controlDict.txt` file in the `config` folder:
