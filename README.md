@@ -192,6 +192,7 @@ The `config/controlDict.txt` file contains parameters that define the properties
 ### &porosity_control Section
 
 - **`thickness`**: Thickness of boundary region ($\Delta/dx$).
+- **`threshold`**: Minimum value of the porosity.
 
 ### &calculation_method Section
 
