@@ -32,6 +32,7 @@ program main
   ! make output directory
   
   call system('mkdir -p '//trim(output_folder))
+  call system('mkdir -p etc')
   ! -----------------
   
   iset=1
@@ -104,7 +105,7 @@ program main
     end do
 
     write(*,*)'--- time_steps= ',istep, ' --  time = ',time
-    write(*,*)'residual= p:', residual_p, 'u:', residual_u, 'v:', residual_v, 'w:',residual_w
+    write(*,*)'residual= p (fluid):', residual_p, 'u:', residual_u, 'v:', residual_v, 'w:',residual_w
 
     call solve_p (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, &
                         density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
@@ -156,7 +157,7 @@ program main
    real:: u_stg, v_stg
    real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
    integer:: i, j, k
-   real:: fc, poro_grad
+   real:: fc
    real:: xlamda
   
   !-----------------
@@ -360,20 +361,26 @@ program main
   do j = 1, n
   do k = 1, l
   ae(i,j,k)= dt*max(small,(porosity(i+1,j,k)+porosity(i,j,k))*0.5)/dx/dx
+
   aw(i,j,k)= dt*max(small,(porosity(i,j,k)+porosity(i-1,j,k))*0.5)/dx/dx
+
   an(i,j,k)= dt*max(small,(porosity(i,j+1,k)+porosity(i,j,k))*0.5)/dy/dy
+
   as(i,j,k)= dt*max(small,(porosity(i,j,k)+porosity(i,j-1,k))*0.5)/dy/dy
+
   at(i,j,k)= dt*max(small,(porosity(i,j,k+1)+porosity(i,j,k))*0.5)/dz/dz
+
   ab(i,j,k)= dt*max(small,(porosity(i,j,k)+porosity(i,j,k-1))*0.5)/dz/dz
+
   ap(i,j,k)= -ae(i,j,k)-aw(i,j,k)-an(i,j,k)-as(i,j,k)-at(i,j,k)-ab(i,j,k)
-  
+
   bb(i,j,k)= ((porosity(i+1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i+1,j,k))*0.5             &
              -(porosity(i-1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i-1,j,k))*0.5)*density/dx &
             +((porosity(i,j+1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j+1,k))*0.5             &
              -(porosity(i,j-1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j-1,k))*0.5)*density/dy &
             +((porosity(i,j,k+1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k+1))*0.5             &
              -(porosity(i,j,k-1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k-1))*0.5)*density/dz 
-  
+
   end do
   end do
   end do
@@ -388,7 +395,7 @@ program main
   return
   end subroutine solve_p
   !******************
-  
+ 
   !******************
   ! OpenMP Parallelized
   ! Written only for CPU machine
@@ -419,9 +426,8 @@ program main
   !$omp end single
 
   do iter = 1, iter_max
-  ! write(*,*)'CHECK iteration no.'
 
-  ! default periodic condition in yz-direction
+  ! default periodic condition in xz-direction
   !$omp do
   do i = 1, m
     do k = 1, l
@@ -466,17 +472,10 @@ program main
             - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
             / ap(i,j,k)*relux_factor &
             + p_old(i,j,k)*(1.-relux_factor)
-  ! p(i,j,k) = (bb(i,j,k) &
-  !           - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
-  !           - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
-  !           - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
-  !           / ap(i,j,k)*relux_factor &
-  !           + p_old(i,j,k)*(1.-relux_factor)
-  
   end do
   !$omp end do
 
-  ! default periodic condition in yz-direction
+  ! default periodic condition in xz-direction
   !$omp do
   do i = 1, m
     do k = 1, l
@@ -506,7 +505,6 @@ program main
   end do
   !$omp end do
   
-
   !-- ODD SPACE process
   !$omp do
   do ii = 1, m*n*l, 2 ! odd space
@@ -522,12 +520,6 @@ program main
               - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
               / ap(i,j,k)*relux_factor &
               + p_old(i,j,k)*(1.-relux_factor)
-    ! p(i,j,k) = (bb(i,j,k) &
-    !           - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
-    !           - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
-    !           - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
-    !           / ap(i,j,k)*relux_factor &
-    !           + p_old(i,j,k)*(1.-relux_factor)
   end do
   !$omp end do
 
@@ -535,7 +527,7 @@ program main
   
   end do
 
-  ! default periodic condition in yz-direction
+  ! default periodic condition in xz-direction
   !$omp do
   do i = 1, m
     do k = 1, l
@@ -1202,7 +1194,7 @@ program main
   write(*,*) 'cfl_no =', cfl_no
   write(*,*) 'pecret_no =', pecret_no
   write(*,*) 'diffusion_factor =', diffusion_factor
-  write(*,*) 'reynolds_no=', reynolds_no
+  ! write(*,*) 'reynolds_no=', reynolds_no
   write(*,*) 'thickness =', thickness
   write(*,*) 'threshold =', threshold
   
@@ -1491,9 +1483,7 @@ program main
   do k = 1, l
   write(61,*) ((porosity(i,j,k), i=1,m),j=1,n)
   end do
-  
-  !write(*,*) "check", (porosity(i,10), i=1,m)
-  
+    
   close (61)
   ! ----------------
   
@@ -1514,7 +1504,6 @@ program main
   end do
   close (62)
   ! ----------------
-  
   
   return
   end subroutine output_solution_post

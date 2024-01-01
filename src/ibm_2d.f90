@@ -315,7 +315,7 @@ program main
    integer,intent(in)::	m, n
   
   ! local variables
-  real::		relux_factor, error
+  real::		relux_factor
   real,dimension(0:md, 0:nd)::	p_old
   integer::	i, j, iter, iter_max, k
   
@@ -325,12 +325,11 @@ program main
   iter_max = min(100, max(m, n))		! SOR max interation steps
   relux_factor = 1.7 	! SOR reluxation factor
   
-  !$acc data copy(p_old, p, error) &
+  !$acc data copy(p_old, p) &
   !$acc    & copyin(ap, ae, aw, an, as, bb, relux_factor)
   
   do iter = 1, iter_max
     ! write(*,*)'CHECK iteration no. ',iter, ' / iter_max', iter_max
-    error=0.
   
     ! default periodic condition in y-direction
     !$acc kernels
@@ -353,7 +352,7 @@ program main
   
     !-- EVEN SPACE process
     !$acc kernels
-    !$acc loop reduction(max:error)
+    !$acc loop independent
     do k = 2, m*n, 2    ! even space
       j = (k - 1) / m + 1
       i = k - (j - 1) * m
@@ -366,7 +365,6 @@ program main
                  - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
                 / ap(i, j) * relux_factor                                 &
                + p_old(i, j) * (1. - relux_factor)
-      error = max(error, abs(p(i, j) - p_old(i, j)))
     end do
     !$acc end kernels
   
@@ -391,7 +389,7 @@ program main
   
     !-- ODD SPACE process
     !$acc kernels
-    !$acc loop reduction(max:error)
+    !$acc loop independent
     do k = 1, m*n, 2    ! odd space
       j = (k - 1) / m + 1
       i = k - (j - 1) * m
@@ -404,7 +402,6 @@ program main
                  - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
                 / ap(i, j) * relux_factor                                 &
                + p_old(i, j) * (1. - relux_factor)
-      error = max(error, abs(p(i, j) - p_old(i, j)))
     end do
     !$acc end kernels
   
@@ -422,7 +419,7 @@ program main
   
   !$acc end data
   
-   write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
+  !  write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
   ! write(*,*)' check P(10,10) in solve_matrix ', p(10,10)
   ! ----------------
   
@@ -442,7 +439,7 @@ program main
     integer,intent(in)::m, n
   
    ! local variables
-   real::	relux_factor, error
+   real::	relux_factor
    real,dimension(0:md, 0:nd)::p_old
    integer::	i, j, iter, iter_max, k
   
@@ -455,12 +452,11 @@ program main
    !   SOR algorithm
    ! ----------------
    !$omp single
-   iter_max = min(300, max(m, n))		! SOR max interation steps
-   relux_factor = 1.7 	! SOR reluxation factor
+   iter_max = min(300, max(m, n)) ! SOR max interation steps
+   relux_factor = 1.7 ! SOR reluxation factor
    !$omp end single
   
    do iter = 1, iter_max
-     ! write(*,*)'CHECK iteration no. ',iter, ' / iter_max', iter_max
   
      ! default periodic condition in y-direction
      !$omp do
@@ -538,12 +534,6 @@ program main
      p(i, n+1) = p(i, 1)
    end do
    !$omp end do
-  
-   !$omp master
-    ! write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
-   ! write(*,*)' check P(10,10) in solve_matrix ', p(10,10)
-   !$omp end master
-   ! ----------------
   
    !$omp end parallel
   
@@ -935,8 +925,9 @@ program main
   write(*,*) 'cfl_no =', cfl_no
   write(*,*) 'pecret_no =', pecret_no
   write(*,*) 'diffusion_factor =', diffusion_factor
-  write(*,*) 'reynolds_no=' , reynolds_no
+  ! write(*,*) 'reynolds_no=' , reynolds_no
   write(*,*) 'thickness =', thickness
+  write(*,*) 'threshold =', threshold
   
   do i = 0, m+1
   xp(i) = dx * real(i-1) - width*0.5
