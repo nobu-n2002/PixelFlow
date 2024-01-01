@@ -1,7 +1,7 @@
 program main
     !$ use omp_lib
      implicit none
-     integer,parameter:: md = 200, nd = 200, ld = 200   ! md, nd, ld > grid size (m,n,l)
+     integer,parameter:: md = 300, nd = 300, ld = 300   ! md, nd, ld > grid size (m,n,l)
      real:: dx, dy, dz, dt
      real:: xnue, xlamda, density, width, height, depth, time
      real:: inlet_velocity, outlet_pressure, AoA, thickness
@@ -137,7 +137,7 @@ program main
     subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
       xnue, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
      implicit none
-     integer,parameter:: md = 200, nd = 200, ld = 200
+     integer,parameter:: md = 300, nd = 300, ld = 300
      real,intent(in):: dx, dy, dz, dt
      real,intent(in):: xnue, density, height, thickness
      real,intent(inout),dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old 
@@ -392,7 +392,7 @@ program main
     ! No efficiency ensured on GPU machine 
     subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
      implicit none
-     integer,parameter:: md=200, nd = 200, ld = 200
+     integer,parameter:: md=300, nd = 300, ld = 300
      real,intent(inout),dimension(0:md,0:nd,0:ld):: p
      real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
      integer,intent(in):: m, n, l
@@ -581,7 +581,7 @@ program main
     ! No efficiency ensured on CPU machine 
     subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
      implicit none
-     integer,parameter:: md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(inout),dimension(0:md,0:nd,0:ld):: p
      real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
      integer,intent(in):: m, n, l
@@ -768,7 +768,7 @@ program main
     !******************
     subroutine  solve_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
      implicit none
-     integer,parameter:: md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(inout),dimension(0:md,0:nd,0:ld):: p
      real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
      integer,intent(in):: m, n, l
@@ -847,7 +847,7 @@ program main
     !******************
     subroutine  boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in)::height
      real,intent(in),dimension(0:md,0:nd,0:ld)::p
      real,intent(inout),dimension(0:md,0:nd,0:ld)::ap, ae, aw, an, as, at, ab, bb
@@ -887,7 +887,7 @@ program main
     !******************
     subroutine  solve_u (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in)::dx, dy, dz, dt
      real,intent(in)::xnue, density, xlamda
      real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p, u_old, v_old, w_old
@@ -933,7 +933,7 @@ program main
     !******************
     subroutine  solve_v (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in)::dx, dy, dz, dt
      real,intent(in)::xnue, density, xlamda
      real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p, u_old, v_old, w_old
@@ -978,7 +978,7 @@ program main
     !******************
     subroutine  solve_w (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in)::dx, dy, dz, dt
      real,intent(in)::xnue, density, xlamda
      real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p, u_old, v_old, w_old
@@ -1026,7 +1026,7 @@ program main
     subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
                          , inlet_velocity, outlet_pressure, AoA, porosity, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in)::width, height, depth, inlet_velocity, outlet_pressure, AoA
      real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p
      real,intent(in),dimension(0:md,0:nd,0:ld)::porosity
@@ -1099,7 +1099,7 @@ program main
     subroutine physical_conditions(xnue, xlamda, density, width, height, depth, time &
                                   , inlet_velocity, outlet_pressure, AoA, m, n, l)
      implicit none
-     integer,parameter:: md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(inout):: xnue, xlamda, density
      real,intent(inout):: width, height, depth
      real,intent(inout):: time, inlet_velocity, outlet_pressure, AoA
@@ -1152,7 +1152,7 @@ program main
     subroutine  grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, height, depth, thickness, time &
                                 , inlet_velocity, AoA, porosity, m, n, l, istep_max, iset)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(inout)::dx, dy, dz, dt, AoA, thickness
      real,intent(in)::xnue, density, width, height, depth, time, inlet_velocity
      real,intent(inout),dimension(0:md,0:nd,0:ld)::porosity
@@ -1286,7 +1286,7 @@ program main
     subroutine  initial_conditions (p, u, v, w, xp, yp, zp, width, height, depth  &
                                    , inlet_velocity, outlet_pressure, AoA, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in)::width, height, depth, inlet_velocity, outlet_pressure, AoA
      real,intent(out),dimension(0:md,0:nd,0:ld)::u, v, w, p 
      real,intent(in),dimension(0:md)::xp
@@ -1320,7 +1320,7 @@ program main
     !******************
     subroutine  output_solution (p, u, v, w, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md,0:nd,0:ld)::u, v, w, p 
      integer,intent(in)::m, n, l
     
@@ -1370,7 +1370,7 @@ program main
     !******************
     subroutine  output_grid (xp, yp, zp, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md)::xp
      real,intent(in),dimension(0:nd)::yp
      real,intent(in),dimension(0:ld)::zp
@@ -1395,7 +1395,7 @@ program main
     !******************
     subroutine  output_grid_list (xp, yp, zp, m, n, l, angle_of_attack)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md)::xp
      real,intent(in),dimension(0:nd)::yp
      real,intent(in),dimension(0:ld)::zp
@@ -1429,7 +1429,7 @@ program main
     !******************
     subroutine  output_solution_post (p, u, v, w, xp, yp, zp, porosity, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md,0:nd,0:ld)::u, v, w, p
      real,intent(in),dimension(0:md,0:nd,0:ld)::porosity
      real,intent(in),dimension(0:md)::xp
@@ -1566,7 +1566,7 @@ program main
     !******************
     subroutine  output_paraview (p, u, v, w, porosity, xp, yp, zp, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md)::xp
      real,intent(in),dimension(0:nd)::yp
      real,intent(in),dimension(0:ld)::zp
@@ -1681,7 +1681,7 @@ program main
     !******************
     subroutine  output_divergent (p, u, v, w, porosity, dx, dy, dz, m, n, l)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md,0:nd,0:ld)::u, v, w, p 
      real,intent(in),dimension(0:md,0:nd,0:ld)::porosity
      real,intent(in)::dx, dy, dz
@@ -1733,7 +1733,7 @@ program main
     !******************
     subroutine  output_paraview_temp (p, u, v, w, porosity, xp, yp, zp, m, n, l, istep)
      implicit none
-     integer,parameter::md=200, nd = 200, ld = 200     ! md, nd > grid size (m,n)
+     integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
      real,intent(in),dimension(0:md)::xp
      real,intent(in),dimension(0:nd)::yp
      real,intent(in),dimension(0:ld)::zp

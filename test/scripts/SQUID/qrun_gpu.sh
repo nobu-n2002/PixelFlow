@@ -3,16 +3,19 @@
 #PBS -q SQUID
 #PBS --group=hp000000                           # Group ID
 #PBS -l elapstim_req=05:00:00                   # Forcibly terminating after 5 hours.
-#PBS --venode=1                                 # Using one node for vector computation.
+#PBS -l gpunum_job=1
 #PBS -m eb                                      # At the start of the batch request execution, send an email.
 #PBS -M hoge@mail                               # e-mail address
 #------- Program execution -----------
 module purge
-module load BaseVEC/2023
+module load BaseGPU
+export UCX_TLS=sm,cuda_copy,cuda_ipc,gdr_copy,self  #1ノードで実行する場合は設定してください
 
 cd $PBS_O_WORKDIR
 
-STDOUT_FNAME=runlog_$(date "+%Y.%m.%d-%H.%M.%S").txt
-echo 'Use VECTOR machine' > $STDOUT_FNAME
-echo 'Number of threads used = '$OMP_NUM_THREADS > $STDOUT_FNAME
-./bin/ibm3 controlDict.txt >>$STDOUT_FNAME 2>&1 &
+EXE=ibm2
+LOG_DIR=logs
+
+STDOUT_FNAME=runlog_$(date "+%Y.%m.%d-%H.%M.%S").txt 
+echo 'GPU used for this run '> $LOG_DIR/$STDOUT_FNAME
+./bin/$EXE >> $LOG_DIR/$STDOUT_FNAME 2>&1 &

@@ -1,24 +1,32 @@
 #!/bin/bash
 
-module load BaseVEC/2023
-
 SRC_DIR=src
 SRC=ibm_3d.f90
-#FC=gfortran
-#FC=nvfortran
-FC=nfort
+TYPE=vec # cpu || gpu || vec
 BIN_DIR=bin
 EXE=ibm3
 
-case "$FC" in
+case "$TYPE" in
 #[MEMO] IF "2055 Segmentation fault (core dumped)" APPEARS, ADD "-fno-automatic".
         # gfortran) FC_FLAG='-O3 -fopenmp -fno-automatic -foffload=nvptx-none';;
-        gfortran) FC_FLAG='-O3 -fopenmp -fno-automatic -o';;
+        cpu)
+            module load BaseCPU/2023
+            FC=gfortran
+            FC_FLAG='-O3 -fopenmp -fno-automatic -o'
+            ;;
 
 #[MEMO] IF "Segmentation fault" APPEARS, ADD "-Msave".
-        nvfortran) FC_FLAG='-O3 -mp=multicore -Msave -o';;
+        gpu)
+            module load BaseGPU/2023
+            FC=nvfortran
+            FC_FLAG='-O3 -acc=gpu -gpu=ccall -Minfo=accel -o'
+            ;;
 
-        nfort) FC_FLAG='-O3 -fopenmp -o'
+        vec)
+            module load BaseVEC/2023
+            FC=nfort
+            FC_FLAG='-O3 -fopenmp -o'
+            ;;
 
 esac
 

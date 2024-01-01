@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Make directory
-mkdir -p bin data config etc
+mkdir -p bin data config etc logs
 
 # Build src *.f90 and create controlDict.txt
 echo "Making 3d project"

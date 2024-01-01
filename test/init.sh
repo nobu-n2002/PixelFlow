@@ -5,8 +5,7 @@
 DIMENSION=2
 
 # make directory
-mkdir -p bin config etc
-
+mkdir -p bin config etc logs
 
 # target directory
 TARGET_DIR="data"
