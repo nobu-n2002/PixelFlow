@@ -1379,7 +1379,7 @@ program main
     ! local variables
     integer::i, j, k
     
-    open (60, file='grid.dat', status='replace')
+    open (60, file='etc/grid.dat', status='replace')
     ! ----------------
     write(60,*)'m, n, l =', m, n, l
     write(60,*)'grid points ='
@@ -1407,7 +1407,7 @@ program main
     real::pai=atan(1.)*4.
     real::x, y, z, th
     
-    open (60, file='./data/cellcenter.dat', status='replace')
+    open (60, file='etc/cellcenter.dat', status='replace')
     ! ----------------
     th = angle_of_attack/180.*pai
     do i=1,m
@@ -1443,7 +1443,7 @@ program main
      integer::i, j, k
      real,dimension(0:md, 0:nd, 0:ld)::u_cnt, v_cnt, w_cnt, p_cnt
     
-    open (61, file='solution_uvp.dat', status='replace')
+    open (61, file='etc/solution_uvp.dat', status='replace')
     
     ! ----------------
     ! interpolation at p-center grid
@@ -1542,7 +1542,7 @@ program main
     
     ! ----------------
     ! surface profile
-    open (62, file='surface_profile.dat', status='replace')
+    open (62, file='etc/surface_profile.dat', status='replace')
     
     do k=1,l
     do j=1,n
@@ -1691,7 +1691,7 @@ program main
     integer::i, j, k
     real,dimension(0:md,0:nd,0:ld)::div
     
-    open (62, file='divergent.dat', status='replace')
+    open (62, file='etc/divergent.dat', status='replace')
     ! ----------------
     
     do i = 1, m
