@@ -9,13 +9,15 @@ This is an implementation based on the paper "A Novel approach for wall-boundary
 For comprehensive insights into the proposed methodology and findings presented in our work, please consider referencing the [paper](https://doi.org/10.1299/jfst.2023jfst0034):
 
 ```bibtex
-@InProceedings{Oshima_2023_MEJ,
-  author    = {Nobuyuki OSHIMA},
-  title     = {A Novel Approach for Wall-boundary Immersed Flow Simulation: Proposal of Modified Navier-Stokes Equation},
-  booktitle = {Mechanical Engineering Journal},
-  volume    = {18},
-  number    = {4},
-  year      = {2023},
+@article{oshima2023novel,
+  title={A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation)},
+  author={Oshima, Nobuyuki},
+  journal={Journal of Fluid Science and Technology},
+  volume={18},
+  number={4},
+  pages={JFST0034--JFST0034},
+  year={2023},
+  publisher={The Japan Society of Mechanical Engineers}
 }
 ```
 
