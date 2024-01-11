@@ -10,6 +10,7 @@ from pyevtk.hl import imageToVTK
 input_folder = 'sample'
 output_folder = f'output_view_{input_folder}'
 dim = 64
+buff = 23
 thickness = 1.5
 output_vtk = True
 output_porosity = True
@@ -174,13 +175,13 @@ def write_porosity(data,filename='porosity.csv'):
 
 
 def main():
-    array_3d = np.zeros((dim, dim, dim), dtype=np.float32)
+    array_3d = np.ones((dim+2*space, dim+2*space, dim+2*space), dtype=np.float32)
 
     for i in range(dim):
         # Load bitmap image by specifying its path
         bitmap_path = f'{input_folder}/img{i:05d}.bmp'
         bitmap_array = load_bitmap_image(bitmap_path)
-        array_3d[:, :, i] = bitmap_array[:, :]
+        array_3d[space:space+dim, space:space+dim, space+i] = bitmap_array[:, :]
 
     # Visualization    
     view_threshold(array_3d, output_folder, "binary", [-0.1,0.1])
