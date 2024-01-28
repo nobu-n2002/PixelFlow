@@ -6,15 +6,51 @@ from tqdm import tqdm
 from scipy.ndimage import convolve
 from pyevtk.hl import imageToVTK
 
+def main():
+    input_folder = 'sample'
+    output_folder = f'output_view_{input_folder}'
+    dim = 32
+    buff = 0
+    thickness = 1.5
+    output_vtk = True
+    output_porosity = True
+    output_file_path = f'{output_folder}/porosity_{input_folder}.csv'
+    
+    array_3d = np.ones((dim+2*buff, dim+2*buff, dim+2*buff), dtype=np.float32)
 
-input_folder = 'sample'
-output_folder = f'output_view_{input_folder}'
-dim = 64
-buff = 23
-thickness = 1.5
-output_vtk = True
-output_porosity = True
-output_file_path = f'{output_folder}/porosity_{input_folder}.csv'
+    for i in range(dim):
+        # Load bitmap image by specifying its path
+        bitmap_path = f'{input_folder}/img_{i:05d}.bmp'
+        bitmap_array = load_bitmap_image(bitmap_path)
+        array_3d[buff:buff+dim, buff:buff+dim, buff+i] = bitmap_array[:, :]
+
+    # Visualization    
+    view_threshold(array_3d, output_folder, "binary", [-0.1,0.1])
+    view_threshold_all(array_3d, output_folder, "binary", [-0.1,0.1])
+
+    print("Calculating porosity value using Tanh Filter...")
+    kernel = create_tanh_kernel(thickness=thickness)
+    porosity = convolve(array_3d, kernel, mode='nearest', cval=1.000000)
+    print(f'porosity shape: {porosity.shape}')
+    print("Processing complete.")
+
+    if output_vtk:
+        print("Saving Voxel Data to VTK file...")
+        imageToVTK(f'{output_folder}/point_data_{input_folder}',pointData={'porosity':porosity})
+        print("Processing complete.")
+
+    if output_porosity:
+        print('Saving porosity Data to CSV file')
+        write_porosity(porosity,filename=output_file_path)
+        print(f"porosity data has been saved to {output_file_path}.")
+
+    # Visualization
+    view_contour(porosity, output_folder, "porosity0119", 0.119)
+    view_contour(porosity, output_folder, "porosity0500", 0.500)
+    view_contour(porosity, output_folder, "porosity0881", 0.881)
+    view_contour_all(porosity, output_folder, "porosity0119", 0.119)
+    view_contour_all(porosity, output_folder, "porosity0500", 0.500)
+    view_contour_all(porosity, output_folder, "porosity0881", 0.881)
 
 
 def load_bitmap_image(file_path):
@@ -173,43 +209,6 @@ def write_porosity(data,filename='porosity.csv'):
                 for i in range(1, m+1):
                     file.write(f"{int(i)}, {int(j)}, {int(k)}, {(data[i-1, j-1, k-1]):.10f}\n")
 
-
-def main():
-    array_3d = np.ones((dim+2*buff, dim+2*buff, dim+2*buff), dtype=np.float32)
-
-    for i in range(dim):
-        # Load bitmap image by specifying its path
-        bitmap_path = f'{input_folder}/img{i:05d}.bmp'
-        bitmap_array = load_bitmap_image(bitmap_path)
-        array_3d[buff:buff+dim, buff:buff+dim, buff+i] = bitmap_array[:, :]
-
-    # Visualization    
-    view_threshold(array_3d, output_folder, "binary", [-0.1,0.1])
-    view_threshold_all(array_3d, output_folder, "binary", [-0.1,0.1])
-
-    print("Calculating porosity value using Tanh Filter...")
-    kernel = create_tanh_kernel(thickness=thickness)
-    porosity = convolve(array_3d, kernel, mode='nearest', cval=1.000000)
-    print(f'porosity shape: {porosity.shape}')
-    print("Processing complete.")
-
-    if output_vtk:
-        print("Saving Voxel Data to VTK file...")
-        imageToVTK(f'{output_folder}/point_data_{input_folder}',pointData={'porosity':porosity})
-        print("Processing complete.")
-
-    if output_porosity:
-        print('Saving porosity Data to CSV file')
-        write_porosity(porosity,filename=output_file_path)
-        print(f"porosity data has been saved to {output_file_path}.")
-
-    # Visualization
-    view_contour(porosity, output_folder, "porosity0119", 0.119)
-    view_contour(porosity, output_folder, "porosity0500", 0.500)
-    view_contour(porosity, output_folder, "porosity0881", 0.881)
-    view_contour_all(porosity, output_folder, "porosity0119", 0.119)
-    view_contour_all(porosity, output_folder, "porosity0500", 0.500)
-    view_contour_all(porosity, output_folder, "porosity0881", 0.881)
 
 if __name__ == "__main__":
     main()

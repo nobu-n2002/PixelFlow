@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# Set the dimension to 2 or 3
 DIMENSION=3
 export OMP_NUM_THREADS=8
+
+sh scripts/build3d.sh
 
 STDOUT_FNAME="runlog_$(date "+%Y.%m.%d-%H.%M.%S").txt"
 mkdir -p logs
 echo "Number of threads used = $OMP_NUM_THREADS" > "logs/$STDOUT_FNAME"
 
+# DIMENSIONの値によってibm3またはibm2を選択して実行
 if [ "$DIMENSION" -eq 3 ]; then
     echo "Running ibm3..."
     ./bin/ibm3 >> "logs/$STDOUT_FNAME" 2>&1 &

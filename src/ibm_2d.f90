@@ -8,11 +8,8 @@ program main
    real,dimension(0:md,0:nd):: porosity
    real,dimension(0:md):: xp
    real,dimension(0:nd):: yp
-   real,dimension(0:md,0:nd):: ap, ae, aw, an, as, bb
-   real::residual_p, residual_u, residual_v
    integer:: m, n, istep, istep_max, iset, istep_out
    integer:: i, j
-   real:: tp, tu, tv, tbc, ttmpout
    character(len=50) :: output_folder
    character(len=50) :: csv_file
   ! ----------------
@@ -88,20 +85,13 @@ program main
   do istep = 1, istep_max
   
     time = istep* dt
-    residual_p = 0.0
-    residual_u = 0.0
-    residual_v = 0.0
     do i = 0, m+1
       do j = 0, n+1
-        residual_p = max(residual_p, porosity(i,j) * abs(p(i,j) - p_old(i,j)))
-        residual_u = max(residual_u, abs(u(i,j) - u_old(i,j)))
-        residual_v = max(residual_v, abs(v(i,j) - v_old(i,j)))
         u_old(i,j) = u(i,j)
         v_old(i,j) = v(i,j)
-        p_old(i,j) = p(i,j)
       end do
     end do
-    write(*,*)'--- time_steps= ',istep, ' --  time = ',time, 'residual= p:', residual_p, 'u:', residual_u, 'v:', residual_v
+    write(*,*)'--- time_steps= ',istep, ' --  time = ',time
   
     call  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, height, thickness, yp, dx, dy, dt, m, n)
   
@@ -439,13 +429,13 @@ program main
     integer,intent(in)::m, n
   
    ! local variables
-   real::	relux_factor
+   real::	relux_factor, error
    real,dimension(0:md, 0:nd)::p_old
    integer::	i, j, iter, iter_max, k
   
    !$omp parallel private(iter, i, j, k) &
    !$omp & shared(iter_max, relux_factor, m, n) &
-   !$omp & shared(p_old, p, ap, ae, aw, an, as, bb) &
+   !$omp & shared(error, p_old, p, ap, ae, aw, an, as, bb) &
    !$omp & default(none)
   
    ! ----------------
@@ -454,6 +444,7 @@ program main
    !$omp single
    iter_max = min(300, max(m, n)) ! SOR max interation steps
    relux_factor = 1.7 ! SOR reluxation factor
+   error = 0.0
    !$omp end single
   
    do iter = 1, iter_max
@@ -475,7 +466,7 @@ program main
      !$omp end do
   
      !-- EVEN SPACE process
-     !$omp do
+     !$omp do reduction(max: error)
      do k = 2, m*n, 2    ! even space
        j = (k - 1) / m + 1
        i = k - (j - 1) * m
@@ -488,6 +479,7 @@ program main
                   - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
                  / ap(i, j) * relux_factor                                 &
                 + p_old(i, j) * (1. - relux_factor)
+       error = max(error, abs(p(i,j)-p_old(i,j)))
      end do
     !$omp end do
   
@@ -508,7 +500,7 @@ program main
      !$omp end do
   
      !-- ODD SPACE process
-    !$omp do
+     !$omp do reduction(max: error)
      do k = 1, m*n, 2    ! odd space
        j = (k - 1) / m + 1
        i = k - (j - 1) * m
@@ -521,6 +513,7 @@ program main
                   - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
                  / ap(i, j) * relux_factor                                 &
                 + p_old(i, j) * (1. - relux_factor)
+       error = max(error, abs(p(i,j)-p_old(i,j)))
      end do
     !$omp end do
   
@@ -534,7 +527,11 @@ program main
      p(i, n+1) = p(i, 1)
    end do
    !$omp end do
-  
+   
+   !$omp master
+   write(*,*) 'SOR iteration no.', iter_max, '-- p error:', error
+   !$omp end master
+   
    !$omp end parallel
   
    return
@@ -904,17 +901,13 @@ program main
   end do
   close(52)
   
-  ! thickness = 2.5
-  dx = width / real(m-1)
-  dy = height / real(n-1)
+  dx = width / real(m)
+  dy = height / real(n)
   dt = time / real(istep_max)
-  
-  radius = 0.25 * height
   
   cfl_no           = inlet_velocity * dt / dx
   pecret_no        = inlet_velocity * dx / xnue
   diffusion_factor = xnue * dt / dy / dy
-  reynolds_no      = radius * inlet_velocity / xnue
   
   !----- check print out
   write(*,*)
@@ -925,7 +918,6 @@ program main
   write(*,*) 'cfl_no =', cfl_no
   write(*,*) 'pecret_no =', pecret_no
   write(*,*) 'diffusion_factor =', diffusion_factor
-  ! write(*,*) 'reynolds_no=' , reynolds_no
   write(*,*) 'thickness =', thickness
   write(*,*) 'threshold =', threshold
   

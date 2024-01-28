@@ -22,9 +22,8 @@ def save_bitmap(data, output_path):
     img.save(output_path)
 
 def main():
-    voxel_size = 64
-    sphere_radius = 16  # 半径
-    num_spheres = 64
+    voxel_size = 32
+    sphere_radius = 12
 
     # Create output folder
     output_folder = 'sample'
@@ -35,10 +34,10 @@ def main():
     for file_path in files_to_delete:
         os.remove(file_path)
 
-    for i in range(num_spheres):
+    for i in range(voxel_size):
         voxel_data = create_voxel_data(voxel_size, sphere_radius)
-        output_path = f"{output_folder}/img{i:05d}.bmp"
-        save_bitmap(voxel_data[i, :, :], output_path)  # 32x32のスライスを使用
+        output_path = f"{output_folder}/img_{i:05d}.bmp"
+        save_bitmap(voxel_data[i, :, :], output_path)
         print(f"Saved {output_path}")
 
 if __name__ == "__main__":
