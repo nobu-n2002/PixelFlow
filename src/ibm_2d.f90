@@ -901,8 +901,8 @@ program main
   end do
   close(52)
   
-  dx = width / real(m)
-  dy = height / real(n)
+  dx = width / real(m-1)
+  dy = height / real(n-1)
   dt = time / real(istep_max)
   
   cfl_no           = inlet_velocity * dt / dx
