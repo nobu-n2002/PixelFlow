@@ -79,40 +79,54 @@ program main
   ! ----------------
   ! MAC algorithm start
   do istep = 1, istep_max
-  
-  time = istep * dt
-  
-  do k = 0, l+1
-    do j = 0, n+1
-      do i = 0, m+1
-        u_old(i,j,k) = u(i,j,k)
-        v_old(i,j,k) = v(i,j,k)
-        w_old(i,j,k) = w(i,j,k)
+    
+    time = istep * dt
+    
+    !$omp parallel private(i, j, k) &
+    !$omp & shared(m, n, l) &
+    !$omp & shared(u_old, v_old, w_old, u, v, w) &
+    !$omp & default(none)
+    !$omp do
+    do k = 0, l+1
+      do j = 0, n+1
+        do i = 0, m+1
+          u_old(i,j,k) = u(i,j,k)
+          v_old(i,j,k) = v(i,j,k)
+          w_old(i,j,k) = w(i,j,k)
+        end do
       end do
     end do
-  end do
-
-  write(*,*)'--- time_steps= ',istep, ' --  time = ',time
-
-  call solve_p (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, &
-                density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
-
-  !-- solve u, v, w (fix u, v, w)
-  do k = 1, l
-    do j = 1, n
-      do i = 1, m
-        u(i,j,k) = u(i,j,k) - dt/density*(p(i+1,j,k)-p(i-1,j,k))/dx*0.5
-        v(i,j,k) = v(i,j,k) - dt/density*(p(i,j+1,k)-p(i,j-1,k))/dy*0.5
-        w(i,j,k) = w(i,j,k) - dt/density*(p(i,j,k+1)-p(i,j,k-1))/dz*0.5
+    !$omp end do
+    !$omp end parallel
+  
+    write(*,*)'--- time_steps= ',istep, ' --  time = ',time
+  
+    call solve_p (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, &
+                  density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
+  
+    !-- solve u, v, w (fix u, v, w)
+    !$omp parallel private(i, j, k) &
+    !$omp & shared(m, n, l, dt, dx, dy, dz, density) &
+    !$omp & shared(p, u, v, w) &
+    !$omp & default(none)
+    !$omp do
+    do k = 1, l
+      do j = 1, n
+        do i = 1, m
+          u(i,j,k) = u(i,j,k) - dt/density*(p(i+1,j,k)-p(i-1,j,k))/dx*0.5
+          v(i,j,k) = v(i,j,k) - dt/density*(p(i,j+1,k)-p(i,j-1,k))/dy*0.5
+          w(i,j,k) = w(i,j,k) - dt/density*(p(i,j,k+1)-p(i,j,k-1))/dz*0.5
+        end do
       end do
     end do
-  end do
-
-  call boundary(p, u, v, w, xp, yp, zp, width, height, depth  &
-                    , inlet_velocity, outlet_pressure, AoA, porosity, m, n, l)
+    !$omp end do
+    !$omp end parallel
   
-  if(mod(istep,istep_out)==0) call  output_paraview_temp (p, u, v, w, porosity, xp, yp, zp, m, n, l, istep)
-  
+    call boundary(p, u, v, w, xp, yp, zp, width, height, depth  &
+                      , inlet_velocity, outlet_pressure, AoA, porosity, m, n, l)
+    
+    if(mod(istep,istep_out)==0) call  output_paraview_temp (p, u, v, w, porosity, xp, yp, zp, m, n, l, istep)
+    
   end do
   ! MAC algorithm end
   ! ----------------
@@ -137,22 +151,22 @@ end program main
 subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                      xnue, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
   implicit none
-  integer,parameter:: md = 300, nd = 300, ld = 300
-  real,intent(in):: dx, dy, dz, dt
-  real,intent(in):: xnue, density, height, thickness
-  real,intent(inout),dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old 
-  real,intent(in),dimension(0:md,0:nd,0:ld):: porosity
-  real,intent(in),dimension(0:nd):: yp
-  integer,intent(in):: m, n, l
+  integer,parameter :: md = 300, nd = 300, ld = 300
+  real,intent(in) :: dx, dy, dz, dt
+  real,intent(in) :: xnue, density, height, thickness
+  real,intent(inout),dimension(0:md,0:nd,0:ld) :: u, v, w, p, u_old, v_old, w_old 
+  real,intent(in),dimension(0:md,0:nd,0:ld) :: porosity
+  real,intent(in),dimension(0:nd) :: yp
+  integer,intent(in) :: m, n, l
  
   !-----------------
   ! local variables 
-  real, parameter:: small = 1.e-6, big = 1.e6, zero = 0.0
-  real, parameter::alpha = 32.0
+  real, parameter :: small = 1.e-6
+  real, parameter :: alpha = 32.0
  
-  real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
-  integer:: i, j, k
-  real:: xlamda
+  real,dimension(0:md,0:nd,0:ld) :: ap, ae, aw, an, as, at, ab, bb, div
+  integer :: i, j, k
+  real :: xlamda
 
   ! ----------------
   ! read input data by using namelist 
@@ -164,9 +178,17 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   close(11)
   ! ----------------
   
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(dx, dy, dz, dt, xnue, density, height, thickness, m, n, l) &
+  !$omp & shared(p, u, v, w, u_old, v_old, w_old, porosity, yp) &
+  !$omp & shared(small, alpha, xlamda, nonslip) &
+  !$omp & shared(ap, ae, aw, an, as, at, ab, bb, div) &
+  !$omp & default(none)
+
   !-----------------
   !  divergence term  div(u)
   !-----------------
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -176,33 +198,40 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
       end do
     end do
   end do
+  !$omp end do
   
-
+  !$omp do
   do k = 1, l
     do j = 1, n
       div(0,j,k)  = 0.  ! inlet yz
       div(m+1,j,k)= 0.  ! outlet yz
     end do
   end do
-  
+  !$omp end do
+ 
+  !$omp do 
   do k = 1, l
     do i = 1, m
       div(i,0,k)  = div(i,n,k)  ! periodic condition xz
       div(i,n+1,k)= div(i,1,k)
     end do
   end do
+  !$omp end do
   
+  !$omp do
   do j = 1, n
     do i = 1, m
       div(i,j,0)  = div(i,j,l)  ! periodic condition xy
       div(i,j,l+1)= div(i,j,1)
     end do
   end do
+  !$omp end do
   
 
   ! ----------------
   !   velocity u
   ! ----------------
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -250,11 +279,12 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
       end do
     end do
   end do
-  
+  !$omp end do
 
   ! ----------------
   !   velocity v
   ! ----------------
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -301,11 +331,13 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
       end do
     end do
   end do
+  !$omp end do
   
 
   ! ----------------
   !   velocity w
   ! ----------------
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -352,10 +384,12 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
       end do
     end do
   end do
+  !$omp end do
   
 
   ! ----------------
   ! matrix solution  !  formulation of porous media
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -383,7 +417,9 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
       end do
     end do
   end do
+  !$omp end do
   
+  !$omp end parallel
 
   call boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
   
