@@ -96,12 +96,18 @@ program main
 
   call solve_p (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, &
                 density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
-  !-- TO DO LIST (Y.Cho, 2024/02/08) 
-  !   (1) Remove solve_u,v,w subroutine and write here directly. 
-  !       : calling subroutine is expensive. solve_u,v,w is small so that they dont need to be subroutines
-  call solve_u (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
-  call solve_v (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
-  call solve_w (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
+
+  !-- solve u, v, w (fix u, v, w)
+  do k = 1, l
+    do j = 1, n
+      do i = 1, m
+        u(i,j,k) = u(i,j,k) - dt/density*(p(i+1,j,k)-p(i-1,j,k))/dx*0.5
+        v(i,j,k) = v(i,j,k) - dt/density*(p(i,j+1,k)-p(i,j-1,k))/dy*0.5
+        w(i,j,k) = w(i,j,k) - dt/density*(p(i,j,k+1)-p(i,j,k-1))/dz*0.5
+      end do
+    end do
+  end do
+
   call boundary(p, u, v, w, xp, yp, zp, width, height, depth  &
                     , inlet_velocity, outlet_pressure, AoA, porosity, m, n, l)
   
@@ -129,265 +135,262 @@ end program main
 
 !******************
 subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
-  xnue, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
- implicit none
- integer,parameter:: md = 300, nd = 300, ld = 300
- real,intent(in):: dx, dy, dz, dt
- real,intent(in):: xnue, density, height, thickness
- real,intent(inout),dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old 
- real,intent(in),dimension(0:md,0:nd,0:ld):: porosity
- real,intent(in),dimension(0:nd):: yp
- integer,intent(in):: m, n, l
+                     xnue, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
+  implicit none
+  integer,parameter:: md = 300, nd = 300, ld = 300
+  real,intent(in):: dx, dy, dz, dt
+  real,intent(in):: xnue, density, height, thickness
+  real,intent(inout),dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old 
+  real,intent(in),dimension(0:md,0:nd,0:ld):: porosity
+  real,intent(in),dimension(0:nd):: yp
+  integer,intent(in):: m, n, l
+ 
+  !-----------------
+  ! local variables 
+  real, parameter:: small = 1.e-6, big = 1.e6, zero = 0.0
+  real, parameter::alpha = 32.0
+ 
+  real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
+  integer:: i, j, k
+  real:: xlamda
 
-!-----------------
-! local variables 
- real, parameter:: small = 1.e-6, big = 1.e6, zero = 0.0
- real, parameter::alpha = 32.0
-
- real:: u_stg, v_stg
- real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
- integer:: i, j, k
- real:: fc
- real:: xlamda
-
-!-----------------
-!  divergence term  div(u)
-!-----------------
-! ----------------
-! read input data by using namelist 
-! by Nobuto Nakamichi 27/7/2023
-logical::nonslip
-namelist /calculation_method/nonslip
-open(11,file="config/controlDict.txt",status="old",action="read")
-read(11,nml=calculation_method)
-close(11)
-! ----------------
-
-do k = 1, l
-  do j = 1, n
-    do i = 1, m
-      div(i,j,k)= (u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5 &
-                + (v_old(i,j+1,k)-v_old(i,j-1,k))/dy*0.5 &
-                + (w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5 
+  ! ----------------
+  ! read input data by using namelist 
+  ! by Nobuto Nakamichi 27/7/2023
+  logical::nonslip
+  namelist /calculation_method/nonslip
+  open(11,file="config/controlDict.txt",status="old",action="read")
+  read(11,nml=calculation_method)
+  close(11)
+  ! ----------------
+  
+  !-----------------
+  !  divergence term  div(u)
+  !-----------------
+  do k = 1, l
+    do j = 1, n
+      do i = 1, m
+        div(i,j,k)= (u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5 &
+                  + (v_old(i,j+1,k)-v_old(i,j-1,k))/dy*0.5 &
+                  + (w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5 
+      end do
     end do
   end do
-end do
-
-do k = 1, l
-  do j = 1, n
-    div(0,j,k)  = 0.  ! inlet yz
-    div(m+1,j,k)= 0.  ! outlet yz
-  end do
-end do
-
-do k = 1, l
-  do i = 1, m
-    div(i,0,k)  = div(i,n,k)  ! periodic condition xz
-    div(i,n+1,k)= div(i,1,k)
-  end do
-end do
-
-do j = 1, n
-  do i = 1, m
-    div(i,j,0)  = div(i,j,l)  ! periodic condition xy
-    div(i,j,l+1)= div(i,j,1)
-  end do
-end do
-
-! ----------------
-fc=0.
-
-!-- TO DO LIST (Y.Cho, 2024/02/08) 
-!   (1) Divide Loop to avoid cache miss. Basis: u, v, w??
-!   (2) Remove 1st upwind scheme part: not used. look the above, fc is zero.
-!   (3) Remove parts not being used.
-do k = 1, l
-  do j = 1, n
-    do i = 1, m
-      ! ----------------
-      !   velocity u
-      ! ----------------
-      ! convection_x  (1st upwind scheme)
-      u(i,j,k)=u_old(i,j,k)-dt*( &
-              fc*( max(u_old(i,j,k),0.)*(u_old(i,j,k)-u_old(i-1,j,k))/dx   &      ! u>0 1st upwind scheme 
-                  +min(u_old(i,j,k),0.)*(u_old(i+1,j,k)-u_old(i,j,k))/dx ) &      ! u<0 1st upwind scheme
-      +(1.-fc)* u_old(i,j,k)*(u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5)    ! 2nd central scheme
-      
-      ! convection_y
-      u(i,j,k)=u(i,j,k)-dt*( &
-             fc*( max(v_old(i,j,k),0.)*(u_old(i,j,k)-u_old(i,j-1,k))/dy   &   ! v>0 1st upwind scheme 
-                  +min(v_old(i,j,k),0.)*(u_old(i,j+1,k)-u_old(i,j,k))/dy) &   ! v<0 1st upwind scheme
-      +(1.-fc)* v_old(i,j,k)*(u_old(i,j+1,k)-u_old(i,j-1,k))/dy*0.5) ! 2nd central scheme
   
-      ! convection_w
-      u(i,j,k)=u(i,j,k)-dt*( &
-              fc*( max(w_old(i,j,k),0.)*(u_old(i,j,k)-u_old(i,j,k-1))/dz   &      ! w>0 1st upwind scheme 
-                  +min(w_old(i,j,k),0.)*(u_old(i,j,k-1)-u_old(i,j,k))/dz ) &      ! w<0 1st upwind scheme
-      +(1.-fc)* w_old(i,j,k)*(u_old(i,j,k+1)-u_old(i,j,k-1))/dz*0.5)    ! 2nd central scheme
-      
-      ! diffusion_x
-      u(i,j,k)=u(i,j,k) +dt*xnue*(u_old(i+1,j,k)-2.*u_old(i,j,k)+u_old(i-1,j,k))/dx/dx 
-      !      +dt*xnue/(small+porosity(i,j,k))*(u_old(i+1,j,k)-u_old(i-1,j,k))*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx/dx*0.25 ! non-conseved term
-      ! diffusion_y
-      u(i,j,k)=u(i,j,k) +dt*xnue*(u_old(i,j+1,k)-2.*u_old(i,j,k)+u_old(i,j-1,k))/dy/dy
-      !      +dt*xnue/(small+porosity(i,j,k))*(u_old(i,j+1,k)-u_old(i,j-1,k))*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy/dy*0.25 ! non-conseved term
-      ! diffusion_z
-      u(i,j,k)=u(i,j,k) +dt*xnue*(u_old(i,j,k+1)-2.*u_old(i,j,k)+u_old(i,j,k-1))/dz/dz
-      !      +dt*xnue/(small+porosity(i,j,k))*(u_old(i,j,k+1)-u_old(i,j,k-1))*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz/dz*0.25 ! non-conseved term
-      
-      ! divergence term
-      u(i,j,k)=u(i,j,k) +dt*(xnue + xlamda)*(div(i+1,j,k)-div(i-1,j,k))/dx*.5
-  
-      ! additional terms by porosity profile
-      u(i,j,k)=u(i,j,k)                 &
-            +dt*( ( (u_old(i+1,j,k)-u_old(i-1,j,k))/dx*.5+(u_old(i+1,j,k)-u_old(i-1,j,k))/dx*.5) &
-                    *xnue*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*.5                            &
-                 +( (u_old(i,j+1,k)-u_old(i,j-1,k))/dy*.5+(v_old(i+1,j,k)-v_old(i-1,j,k))/dx*.5) &
-                    *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*.5                            &
-                 +( (u_old(i,j,k+1)-u_old(i,j,k-1))/dz*.5+(w_old(i+1,j,k)-w_old(i-1,j,k))/dx*.5) &
-                    *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*.5                            &
-                 + div(i,j,k)*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5*xlamda         &
-             )/porosity(i,j,k)
-      ! force on wall
-      if (nonslip) then
-        u(i,j,k)=u(i,j,k)- dt*xnue*u_old(i,j,k)/(thickness*dx)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-      end if
 
-      ! ----------------
-      !   velocity v
-      ! ----------------
-      ! convection_x  (1st upwind scheme)
-      v(i,j,k)=v_old(i,j,k)-dt*(          &
-            fc *(max(u_old(i,j,k),0.)*(v_old(i,j,k)-v_old(i-1,j,k))/dx   &  ! u>0 1st upwind scheme
-                +min(u_old(i,j,k),0.)*(v_old(i+1,j,k)-v_old(i,j,k))/dx)  &  ! u<0 1st upwind scheme
-       +(1.-fc)* u_old(i,j,k)*(v_old(i+1,j,k)-v_old(i-1,j,k))/dx*0.5)       ! 2nd central scheme
-  
-      ! convection_y
-      v(i,j,k)=v(i,j,k)-dt*(          &
-            fc *(max(v_old(i,j,k),0.)*(v_old(i,j,k)-v_old(i,j-1,k))/dy   &  ! v>0 
-                +min(v_old(i,j,k),0.)*(v_old(i,j+1,k)-v_old(i,j,k))/dy)  &  ! v<0
-       +(1.-fc)* v_old(i,j,k)*(v_old(i,j+1,k)-v_old(i,j-1,k))/dy*0.5)       ! 2nd central scheme
-  
-      ! convection_z
-      v(i,j,k)=v(i,j,k)-dt*(          &
-            fc *(max(w_old(i,j,k),0.)*(v_old(i,j,k)-v_old(i,j,k-1))/dz   &  ! v>0 
-                +min(w_old(i,j,k),0.)*(v_old(i,j,k+1)-v_old(i,j,k))/dz)  &  ! v<0
-       +(1.-fc)* w_old(i,j,k)*(v_old(i,j,k+1)-v_old(i,j,k-1))/dz*0.5)       ! 2nd central scheme
-      
-      ! diffusion_x
-      v(i,j,k)=v(i,j,k) +dt*xnue*(v_old(i+1,j,k)-2.*v_old(i,j,k)+v_old(i-1,j,k))/dx/dx
-      !      +dt*xnue/(small+porosity(i,j,k))*(v_old(i+1,j,k)-v_old(i-1,j,k))*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx/dx*0.25 ! non-conseved term
-      ! diffusion_y
-      v(i,j,k)=v(i,j,k) +dt*xnue*(v_old(i,j+1,k)-2.*v_old(i,j,k)+v_old(i,j-1,k))/dy/dy
-      !      +dt*xnue/(small+porosity(i,j,k))*(v_old(i,j+1,k)-v_old(i,j-1,k))*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy/dy*0.25 ! non-conseved term
-      ! diffusion_z
-      v(i,j,k)=v(i,j,k) +dt*xnue*(v_old(i,j,k+1)-2.*v_old(i,j,k)+v_old(i,j,k-1))/dz/dz
-      !      +dt*xnue/(small+porosity(i,j,k))*(v_old(i,j,k+1)-v_old(i,j,k-1))*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz/dz*0.25 ! non-conseved term
-      ! divergence term   ! L+(2/3)N = (1/3)N;(2/3) or 0(1/3)
-      v(i,j,k)=v(i,j,k) +dt*(xnue + xlamda)*(div(i,j+1,k)-div(i,j-1,k))/dy*.5
-      ! additional terms by porosity profile   ! canceled for non-slip condition    ! L+(2/3)N = (1/3)N;(-1/3) or 0:(-2/3)N
-      v(i,j,k)=v(i,j,k)               &
-            +dt*( ( (v_old(i+1,j,k)-v_old(i-1,j,k))/dx*.5+(u_old(i,j+1,k)-u_old(i,j-1,k))/dy*.5) &
-                    *xnue*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*.5                            &
-                 +( (v_old(i,j+1,k)-v_old(i,j-1,k))/dy*.5+(v_old(i,j+1,k)-v_old(i,j-1,k))/dy*.5) &
-                    *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*.5                            &
-                 +( (v_old(i,j,k+1)-v_old(i,j,k-1))/dz*.5+(w_old(i,j+1,k)-w_old(i,j-1,k))/dy*.5) &
-                    *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*.5                            &
-               + div(i,j,k)*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5*xlamda           &
-             )/porosity(i,j,k)
-      ! force on wall
-      if (nonslip) then
-        v(i,j,k)=v(i,j,k)- dt*xnue*v_old(i,j,k)/(thickness*dy)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-      end if
-
-      ! ----------------
-      !   velocity w
-      ! ----------------
-      ! convection_x  (1st upwind scheme)
-      w(i,j,k)=w_old(i,j,k)-dt*(          &
-            fc *(max(u_old(i,j,k),0.)*(w_old(i,j,k)-w_old(i-1,j,k))/dx        &  ! w>0 1st upwind scheme
-                +min(u_old(i,j,k),0.)*(w_old(i+1,j,k)-w_old(i,j,k))/dx)       &  ! w<0 1st upwind scheme
-       +(1.-fc)* u_old(i,j,k)*(w_old(i+1,j,k)-w_old(i-1,j,k))/dx/2.)             ! 2nd central scheme
-      
-      ! convection_y
-      w(i,j,k)=w(i,j,k)-dt*(          &
-            fc *(max(v_old(i,j,k),0.)*(w_old(i,j,k)-w_old(i,j-1,k))/dy   &  ! w>0 
-                +min(v_old(i,j,k),0.)*(w_old(i,j+1,k)-w_old(i,j,k))/dy)  &  ! w<0
-       +(1.-fc)* v_old(i,j,k)*(w_old(i,j+1,k)-w_old(i,j-1,k))/dy/2.)        ! 2nd central scheme
-  
-      ! convection_z
-      w(i,j,k)=w(i,j,k)-dt*(          &
-            fc *(max(w_old(i,j,k),0.)*(w_old(i,j,k)-w_old(i,j,k-1))/dz   &  ! w>0 
-                +min(w_old(i,j,k),0.)*(w_old(i,j,k+1)-w_old(i,j,k))/dz)  &  ! w<0
-       +(1.-fc)* w_old(i,j,k)*(w_old(i,j,k+1)-w_old(i,j,k-1))/dz/2.   )     ! 2nd central scheme
-      
-      ! diffusion_x
-      w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i+1,j,k)-2.*w_old(i,j,k)+w_old(i-1,j,k))/dx/dx
-      !      +dt*xnue/(small+porosity(i,j,k))*(w_old(i+1,j,k)-w_old(i-1,j,k))*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx/dx*0.25 ! non-conseved term
-      ! diffusion_y
-      w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i,j+1,k)-2.*w_old(i,j,k)+w_old(i,j-1,k))/dy/dy
-      !      +dt*xnue/(small+porosity(i,j))*(w_old(i,j+1,k)-w_old(i,j-1,k))*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy/dy*0.25 ! non-conseved term
-      ! diffusion_z
-      w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i,j,k+1)-2.*w_old(i,j,k)+w_old(i,j,k-1))/dz/dz
-      !      +dt*xnue/(small+porosity(i,j))*(w_old(i,j,k+1)-w_old(i,j,k-1))*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz/dz*0.25 ! non-conseved term
-      ! divergence term   ! L+(2/3)N = (1/3)N;(2/3) or 0(1/3)
-      w(i,j,k)=w(i,j,k) +dt*(xnue + xlamda)*(div(i,j,k+1)-div(i,j,k-1))/dz*.5
-      ! additional terms by porosity profile   ! canceled for non-slip condition    ! L+(2/3)N = (1/3)N;(-1/3) or 0:(-2/3)N
-      w(i,j,k)=w(i,j,k)               &
-            +dt*( ( (w_old(i+1,j,k)-w_old(i-1,j,k))/dx*.5+(u_old(i,j,k+1)-u_old(i,j,k-1))/dz*.5) &
-                    *xnue*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*.5                            &
-                 +( (w_old(i,j+1,k)-w_old(i,j-1,k))/dy*.5+(v_old(i,j,k+1)-v_old(i,j,k-1))/dz*.5) &
-                    *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*.5                            &
-                 +( (w_old(i,j,k+1)-w_old(i,j,k-1))/dz*.5+(w_old(i,j,k+1)-w_old(i,j,k-1))/dz*.5) &
-                    *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*.5                            &
-               + div(i,j,k)*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5*xlamda           &
-             )/porosity(i,j,k)
-      ! force on wall
-      if (nonslip) then
-        w(i,j,k)=w(i,j,k)- dt*xnue*w_old(i,j,k)/(thickness*dz)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-      end if
-  
+  do k = 1, l
+    do j = 1, n
+      div(0,j,k)  = 0.  ! inlet yz
+      div(m+1,j,k)= 0.  ! outlet yz
     end do
   end do
-end do
-
-! ----------------
-! matrix solution  !  formulation of porous media
-
-do k = 1, l
-  do j = 1, n
+  
+  do k = 1, l
     do i = 1, m
-      ae(i,j,k) = dt*max(small,(porosity(i+1,j,k)+porosity(i,j,k))*0.5)/dx/dx
-  
-      aw(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i-1,j,k))*0.5)/dx/dx
-  
-      an(i,j,k) = dt*max(small,(porosity(i,j+1,k)+porosity(i,j,k))*0.5)/dy/dy
-  
-      as(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i,j-1,k))*0.5)/dy/dy
-  
-      at(i,j,k) = dt*max(small,(porosity(i,j,k+1)+porosity(i,j,k))*0.5)/dz/dz
-  
-      ab(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i,j,k-1))*0.5)/dz/dz
-  
-      ap(i,j,k) = -ae(i,j,k)-aw(i,j,k)-an(i,j,k)-as(i,j,k)-at(i,j,k)-ab(i,j,k)
-  
-      bb(i,j,k) = ((porosity(i+1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i+1,j,k))*0.5             &
-                 -(porosity(i-1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i-1,j,k))*0.5)*density/dx &
-                +((porosity(i,j+1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j+1,k))*0.5             &
-                 -(porosity(i,j-1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j-1,k))*0.5)*density/dy &
-                +((porosity(i,j,k+1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k+1))*0.5             &
-                 -(porosity(i,j,k-1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k-1))*0.5)*density/dz 
-  
+      div(i,0,k)  = div(i,n,k)  ! periodic condition xz
+      div(i,n+1,k)= div(i,1,k)
     end do
   end do
-end do
+  
+  do j = 1, n
+    do i = 1, m
+      div(i,j,0)  = div(i,j,l)  ! periodic condition xy
+      div(i,j,l+1)= div(i,j,1)
+    end do
+  end do
+  
 
-call boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
+  ! ----------------
+  !   velocity u
+  ! ----------------
+  do k = 1, l
+    do j = 1, n
+      do i = 1, m
+        !-- convection_x  (2nd central scheme)
+        u(i,j,k) = u_old(i,j,k) &
+                   - dt*u_old(i,j,k)*(u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5
+        
+        !-- convection_y  (2nd central scheme)
+        u(i,j,k) = u(i,j,k) &
+                   - dt*v_old(i,j,k)*(u_old(i,j+1,k)-u_old(i,j-1,k))/dy*0.5
+    
+        !-- convection_w  (2nd central scheme)
+        u(i,j,k) = u(i,j,k) &
+                   - dt*w_old(i,j,k)*(u_old(i,j,k+1)-u_old(i,j,k-1))/dz*0.5
+        
+        !-- diffusion_x
+        u(i,j,k)=u(i,j,k) + dt*xnue*(u_old(i+1,j,k)-2.*u_old(i,j,k)+u_old(i-1,j,k))/dx/dx 
+                            
+        !-- diffusion_y     
+        u(i,j,k)=u(i,j,k) + dt*xnue*(u_old(i,j+1,k)-2.*u_old(i,j,k)+u_old(i,j-1,k))/dy/dy
+                            
+        !-- diffusion_z     
+        u(i,j,k)=u(i,j,k) + dt*xnue*(u_old(i,j,k+1)-2.*u_old(i,j,k)+u_old(i,j,k-1))/dz/dz
+                            
+        !-- divergence term 
+        u(i,j,k)=u(i,j,k) + dt*(xnue + xlamda)*(div(i+1,j,k)-div(i-1,j,k))/dx*0.5
+    
+        !-- additional terms by porosity profile
+        u(i,j,k) = u(i,j,k) &
+                   + dt*( &
+                          ((u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5+(u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5)  &
+                            *xnue*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5                             &
+                          +((u_old(i,j+1,k)-u_old(i,j-1,k))/dy*0.5+(v_old(i+1,j,k)-v_old(i-1,j,k))/dx*0.5) &
+                            *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5                             &
+                          +((u_old(i,j,k+1)-u_old(i,j,k-1))/dz*0.5+(w_old(i+1,j,k)-w_old(i-1,j,k))/dx*0.5) &
+                            *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                             &
+                          + div(i,j,k)*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5*xlamda                 &
+                     )/porosity(i,j,k)
+  
+        !-- force on wall
+        if(nonslip) then
+          u(i,j,k) = u(i,j,k) - dt*xnue*u_old(i,j,k)/(thickness*dx)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+        end if
 
-! call solve_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
-call solve_matrix_vec_omp (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
-! call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
+      end do
+    end do
+  end do
+  
 
+  ! ----------------
+  !   velocity v
+  ! ----------------
+  do k = 1, l
+    do j = 1, n
+      do i = 1, m
+        !-- convection_x  (2nd central scheme)
+        v(i,j,k) = v_old(i,j,k) &
+                   - dt*u_old(i,j,k)*(v_old(i+1,j,k)-v_old(i-1,j,k))/dx*0.5
+    
+        !-- convection_y (2nd central scheme)
+        v(i,j,k) = v(i,j,k) &
+                   - dt*v_old(i,j,k)*(v_old(i,j+1,k)-v_old(i,j-1,k))/dy*0.5
+    
+        !-- convection_z (2nd central scheme)
+        v(i,j,k) = v(i,j,k) &
+                   - dt*w_old(i,j,k)*(v_old(i,j,k+1)-v_old(i,j,k-1))/dz*0.5
+        
+        !-- diffusion_x
+        v(i,j,k)=v(i,j,k) + dt*xnue*(v_old(i+1,j,k)-2.*v_old(i,j,k)+v_old(i-1,j,k))/dx/dx
+                            
+        !-- diffusion_y     
+        v(i,j,k)=v(i,j,k) + dt*xnue*(v_old(i,j+1,k)-2.*v_old(i,j,k)+v_old(i,j-1,k))/dy/dy
+                            
+        !-- diffusion_z     
+        v(i,j,k)=v(i,j,k) + dt*xnue*(v_old(i,j,k+1)-2.*v_old(i,j,k)+v_old(i,j,k-1))/dz/dz
+
+        !-- divergence term   ! L+(2/3)N = (1/3)N;(2/3) or 0(1/3)
+        v(i,j,k)=v(i,j,k) + dt*(xnue + xlamda)*(div(i,j+1,k)-div(i,j-1,k))/dy*0.5
+
+        !-- additional terms by porosity profile   ! canceled for non-slip condition    ! L+(2/3)N = (1/3)N;(-1/3) or 0:(-2/3)N
+        v(i,j,k) = v(i,j,k) &
+                   + dt*( &
+                         ((v_old(i+1,j,k)-v_old(i-1,j,k))/dx*0.5+(u_old(i,j+1,k)-u_old(i,j-1,k))/dy*0.5) &
+                           *xnue*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5                            &
+                         +((v_old(i,j+1,k)-v_old(i,j-1,k))/dy*.5+(v_old(i,j+1,k)-v_old(i,j-1,k))/dy*0.5) &
+                           *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5                            &
+                         +((v_old(i,j,k+1)-v_old(i,j,k-1))/dz*.5+(w_old(i,j+1,k)-w_old(i,j-1,k))/dy*0.5) &
+                           *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                            &
+                         + div(i,j,k)*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5*xlamda                &
+                     )/porosity(i,j,k)
+        !-- force on wall
+        if(nonslip) then
+          v(i,j,k) = v(i,j,k) - dt*xnue*v_old(i,j,k)/(thickness*dy)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+        end if
+
+      end do
+    end do
+  end do
+  
+
+  ! ----------------
+  !   velocity w
+  ! ----------------
+  do k = 1, l
+    do j = 1, n
+      do i = 1, m
+        !-- convection_x  (2nd central scheme)
+        w(i,j,k) = w_old(i,j,k) &
+                   - dt*u_old(i,j,k)*(w_old(i+1,j,k)-w_old(i-1,j,k))/dx*0.5
+        
+        !-- convection_y  (2nd central scheme)
+        w(i,j,k) = w(i,j,k) &
+                   - dt*v_old(i,j,k)*(w_old(i,j+1,k)-w_old(i,j-1,k))/dy*0.5
+    
+        !-- convection_z  (2nd central scheme)
+        w(i,j,k) = w(i,j,k) &
+                   - dt*w_old(i,j,k)*(w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5
+        
+        !-- diffusion_x
+        w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i+1,j,k)-2.*w_old(i,j,k)+w_old(i-1,j,k))/dx/dx
+
+        !-- diffusion_y
+        w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i,j+1,k)-2.*w_old(i,j,k)+w_old(i,j-1,k))/dy/dy
+
+        !-- diffusion_z
+        w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i,j,k+1)-2.*w_old(i,j,k)+w_old(i,j,k-1))/dz/dz
+
+        !-- divergence term   ! L+(2/3)N = (1/3)N;(2/3) or 0(1/3)
+        w(i,j,k)=w(i,j,k) +dt*(xnue + xlamda)*(div(i,j,k+1)-div(i,j,k-1))/dz*0.5
+
+        !-- additional terms by porosity profile   ! canceled for non-slip condition    ! L+(2/3)N = (1/3)N;(-1/3) or 0:(-2/3)N
+        w(i,j,k) = w(i,j,k) &
+                   + dt*( &
+                          ((w_old(i+1,j,k)-w_old(i-1,j,k))/dx*0.5+(u_old(i,j,k+1)-u_old(i,j,k-1))/dz*0.5)  &
+                            *xnue*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5                             &
+                          +((w_old(i,j+1,k)-w_old(i,j-1,k))/dy*0.5+(v_old(i,j,k+1)-v_old(i,j,k-1))/dz*0.5) &
+                            *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5                             &
+                          +((w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5+(w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5) &
+                            *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                             &
+                          + div(i,j,k)*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5*xlamda                 &
+                     )/porosity(i,j,k)
+        ! force on wall
+        if (nonslip) then
+          w(i,j,k)=w(i,j,k)- dt*xnue*w_old(i,j,k)/(thickness*dz)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+        end if
+    
+      end do
+    end do
+  end do
+  
+
+  ! ----------------
+  ! matrix solution  !  formulation of porous media
+  do k = 1, l
+    do j = 1, n
+      do i = 1, m
+        ae(i,j,k) = dt*max(small,(porosity(i+1,j,k)+porosity(i,j,k))*0.5)/dx/dx
+    
+        aw(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i-1,j,k))*0.5)/dx/dx
+    
+        an(i,j,k) = dt*max(small,(porosity(i,j+1,k)+porosity(i,j,k))*0.5)/dy/dy
+    
+        as(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i,j-1,k))*0.5)/dy/dy
+    
+        at(i,j,k) = dt*max(small,(porosity(i,j,k+1)+porosity(i,j,k))*0.5)/dz/dz
+    
+        ab(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i,j,k-1))*0.5)/dz/dz
+    
+        ap(i,j,k) = -ae(i,j,k)-aw(i,j,k)-an(i,j,k)-as(i,j,k)-at(i,j,k)-ab(i,j,k)
+    
+        bb(i,j,k) = ((porosity(i+1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i+1,j,k))*0.5              &
+                     -(porosity(i-1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i-1,j,k))*0.5)*density/dx &
+                    +((porosity(i,j+1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j+1,k))*0.5             &
+                     -(porosity(i,j-1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j-1,k))*0.5)*density/dy &
+                    +((porosity(i,j,k+1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k+1))*0.5             &
+                     -(porosity(i,j,k-1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k-1))*0.5)*density/dz 
+    
+      end do
+    end do
+  end do
+  
+
+  call boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
+  
+  ! call solve_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
+  call solve_matrix_vec_omp (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
+  ! call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
+  
 end subroutine solve_p
 !******************
 
@@ -396,121 +399,72 @@ end subroutine solve_p
 ! Written only for CPU machine
 ! No efficiency ensured on GPU machine 
 subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
- implicit none
- integer,parameter:: md=300, nd = 300, ld = 300
- real,intent(inout),dimension(0:md,0:nd,0:ld):: p
- real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
- integer,intent(in):: m, n, l
+  implicit none
+  integer,parameter:: md=300, nd = 300, ld = 300
+  real,intent(inout),dimension(0:md,0:nd,0:ld):: p
+  real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
+  integer,intent(in):: m, n, l
 
-! local variables
-real:: relux_factor, error
-real,dimension(0:md,0:nd,0:ld):: p_old
-integer::i, j, k, iter, iter_max, ii
-
-!$omp parallel private(iter, i, j, k, ii) &
-!$omp & shared(iter_max, relux_factor, m, n, l) &
-!$omp & shared(error, p_old, p, ap, ae, aw, an, as, at, ab, bb) &
-!$omp & default(none)
-
-! ----------------
-!   SOR algorithm
-! ----------------
-!$omp single
-iter_max = 300 ! SOR max interation steps
-relux_factor=1.7 ! SOR reluxation factor
-error = 0.0
-!$omp end single
-
-do iter = 1, iter_max
-
-  ! default periodic condition in xz-direction
-  !$omp do
-  do k = 1, l
-    do i = 1, m
-      p(i,0,k)   = p(i,n,k)
-      p(i,n+1,k) = p(i,1,k)
-    end do
-  end do
-  !$omp end do
-
-  ! default periodic condition in xy-direction
-  !$omp do
-  do j = 1, n
-    do i = 1, m
-      p(i,j,0)   = p(i,j,l)
-      p(i,j,l+1) = p(i,j,1)
-    end do
-  end do
-  !$omp end do
-
-  !$omp do
-  do k = 0, l+1
-    do j = 0, n+1
-      do i = 0, m+1
-        p_old(i,j,k) = p(i,j,k)
+  ! local variables
+  real:: relux_factor, error
+  real,dimension(0:md,0:nd,0:ld):: p_old
+  integer::i, j, k, iter, iter_max, ii
+  
+  !$omp parallel private(iter, i, j, k, ii) &
+  !$omp & shared(iter_max, relux_factor, m, n, l) &
+  !$omp & shared(error, p_old, p, ap, ae, aw, an, as, at, ab, bb) &
+  !$omp & default(none)
+  
+  ! ----------------
+  !   SOR algorithm
+  ! ----------------
+  !$omp single
+  iter_max = 300 ! SOR max interation steps
+  relux_factor=1.7 ! SOR reluxation factor
+  error = 0.0
+  !$omp end single
+  
+  do iter = 1, iter_max
+  
+    ! default periodic condition in xz-direction
+    !$omp do
+    do k = 1, l
+      do i = 1, m
+        p(i,0,k)   = p(i,n,k)
+        p(i,n+1,k) = p(i,1,k)
       end do
     end do
-  end do
-  !$omp end do
+    !$omp end do
   
-  !-- EVEN SPACE process
-  !$omp do reduction(max: error)
-  do ii = 2, m*n*l, 2 ! evenspace
-    k = (ii - 1) / (m * n)  + 1
-    j = ((ii - 1) / m + 1) - (k - 1) * n
-    i = (ii - (j - 1) * m) - (k - 1) * m * n
-
-  !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
-  if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i - 1
-  p(i,j,k) = (bb(i,j,k) &
-            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
-            / ap(i,j,k)*relux_factor &
-            + p_old(i,j,k)*(1.-relux_factor)
-  error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
-  end do
-  !$omp end do
-
-  ! default periodic condition in xz-direction
-  !$omp do
-  do k = 1, l
-    do i = 1, m
-      p(i,0,k)   = p(i,n,k)
-      p(i,n+1,k) = p(i,1,k)
-    end do
-  end do
-  !$omp end do
-
-  ! default periodic condition in xy-direction
-  !$omp do
-  do j = 1, n
-    do i = 1, m
-      p(i,j,0)   = p(i,j,l)
-      p(i,j,l+1) = p(i,j,1)
-    end do
-  end do
-  !$omp end do
-
-  !$omp do
-  do k = 0, l+1
-    do j = 0, n+1
-      do i = 0, m+1
-        p_old(i,j,k) = p(i,j,k)
+    ! default periodic condition in xy-direction
+    !$omp do
+    do j = 1, n
+      do i = 1, m
+        p(i,j,0)   = p(i,j,l)
+        p(i,j,l+1) = p(i,j,1)
       end do
     end do
-  end do
-  !$omp end do
+    !$omp end do
   
-  !-- ODD SPACE process
-  !$omp do reduction(max: error)
-  do ii = 1, m*n*l, 2 ! odd space
-    k = (ii - 1) / (m * n)  + 1
-    j = ((ii - 1) / m + 1) - (k - 1) * n
-    i = (ii - (j - 1) * m) - (k - 1) * m * n
+    !$omp do
+    do k = 0, l+1
+      do j = 0, n+1
+        do i = 0, m+1
+          p_old(i,j,k) = p(i,j,k)
+        end do
+      end do
+    end do
+    !$omp end do
+    
+    !-- EVEN SPACE process
+    !$omp do reduction(max: error)
+    do ii = 2, m*n*l, 2 ! evenspace
+      k = (ii - 1) / (m * n)  + 1
+      j = ((ii - 1) / m + 1) - (k - 1) * n
+      i = (ii - (j - 1) * m) - (k - 1) * m * n
   
     !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
-    if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i + 1
+    if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i - 1
     p(i,j,k) = (bb(i,j,k) &
               - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
               - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
@@ -518,37 +472,86 @@ do iter = 1, iter_max
               / ap(i,j,k)*relux_factor &
               + p_old(i,j,k)*(1.-relux_factor)
     error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
+    end do
+    !$omp end do
+  
+    ! default periodic condition in xz-direction
+    !$omp do
+    do k = 1, l
+      do i = 1, m
+        p(i,0,k)   = p(i,n,k)
+        p(i,n+1,k) = p(i,1,k)
+      end do
+    end do
+    !$omp end do
+  
+    ! default periodic condition in xy-direction
+    !$omp do
+    do j = 1, n
+      do i = 1, m
+        p(i,j,0)   = p(i,j,l)
+        p(i,j,l+1) = p(i,j,1)
+      end do
+    end do
+    !$omp end do
+  
+    !$omp do
+    do k = 0, l+1
+      do j = 0, n+1
+        do i = 0, m+1
+          p_old(i,j,k) = p(i,j,k)
+        end do
+      end do
+    end do
+    !$omp end do
+    
+    !-- ODD SPACE process
+    !$omp do reduction(max: error)
+    do ii = 1, m*n*l, 2 ! odd space
+      k = (ii - 1) / (m * n)  + 1
+      j = ((ii - 1) / m + 1) - (k - 1) * n
+      i = (ii - (j - 1) * m) - (k - 1) * m * n
+    
+      !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
+      if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i + 1
+      p(i,j,k) = (bb(i,j,k) &
+                - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
+                - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
+                - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+                / ap(i,j,k)*relux_factor &
+                + p_old(i,j,k)*(1.-relux_factor)
+      error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
+    end do
+    !$omp end do
+  
+  end do
+  
+  ! default periodic condition in xz-direction
+  !$omp do
+  do k = 1, l
+    do i = 1, m
+      p(i,0,k)  =p(i,n,k)
+      p(i,n+1,k)=p(i,1,k)
+    end do
   end do
   !$omp end do
-
-end do
-
-! default periodic condition in xz-direction
-!$omp do
-do k = 1, l
-  do i = 1, m
-    p(i,0,k)  =p(i,n,k)
-    p(i,n+1,k)=p(i,1,k)
+  
+  ! default periodic condition in xy-direction
+  !$omp do
+  do j = 1, n
+    do i = 1, m
+      p(i,j,0)  =p(i,j,l)
+      p(i,j,l+1)=p(i,j,1)
+    end do
   end do
-end do
-!$omp end do
-
-! default periodic condition in xy-direction
-!$omp do
-do j = 1, n
-  do i = 1, m
-    p(i,j,0)  =p(i,j,l)
-    p(i,j,l+1)=p(i,j,1)
-  end do
-end do
-!$omp end do
-
-!$omp master
-write(*,*) 'SOR iteration no.', iter_max, '-- p error:', error
-!$omp end master
-
-!$omp end parallel
-
+  !$omp end do
+  
+  !$omp master
+  write(*,*) 'SOR iteration no.', iter_max, '-- p error:', error
+  !$omp end master
+  
+  !$omp end parallel
+  
 end subroutine solve_matrix_vec_omp
 !******************
 
@@ -558,134 +561,76 @@ end subroutine solve_matrix_vec_omp
 ! Written only for GPU machine
 ! No efficiency ensured on CPU machine 
 subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
- implicit none
- integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
- real,intent(inout),dimension(0:md,0:nd,0:ld):: p
- real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
- integer,intent(in):: m, n, l
+  implicit none
+  integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
+  real,intent(inout),dimension(0:md,0:nd,0:ld):: p
+  real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
+  integer,intent(in):: m, n, l
 
-! local variables
-real:: relux_factor
-real,dimension(0:md,0:nd,0:ld):: p_old
-integer::i, j, k, iter, iter_max, ii
-
-!$acc data copy(p_old, p) &
-!$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) 
-
-! ----------------
-!   SOR algorithm
-! ----------------
-
-iter_max = 300 ! SOR max interation steps
-relux_factor=1.7 ! SOR reluxation factor
-
-do iter = 1, iter_max
-
-  ! default periodic condition in yz-direction
-  !$acc kernels
-  !$acc loop independent
-  do k = 1, l
+  ! local variables
+  real:: relux_factor
+  real,dimension(0:md,0:nd,0:ld):: p_old
+  integer::i, j, k, iter, iter_max, ii
+  
+  !$acc data copy(p_old, p) &
+  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) 
+  
+  ! ----------------
+  !   SOR algorithm
+  ! ----------------
+  
+  iter_max = 300 ! SOR max interation steps
+  relux_factor=1.7 ! SOR reluxation factor
+  
+  do iter = 1, iter_max
+  
+    ! default periodic condition in yz-direction
+    !$acc kernels
     !$acc loop independent
-    do i = 1, m
-      p(i,0,k)  =p(i,n,k)
-      p(i,n+1,k)=p(i,1,k)
-    end do
-  end do
-  !$acc end kernels
-
-  ! default periodic condition in xy-direction
-  !$acc kernels
-  !$acc loop independent
-  do j = 1, n
-    !$acc loop independent
-    do i = 1, m
-      p(i,j,0)  =p(i,j,l)
-      p(i,j,l+1)=p(i,j,1)
-    end do
-  end do
-  !$acc end kernels
-
-  !$acc kernels
-  !$acc loop independent
-  do k = 0, l+1
-    !$acc loop independent
-    do j = 0, n+1
+    do k = 1, l
       !$acc loop independent
-      do i = 0, m+1
-        p_old(i,j,k) = p(i,j,k)
+      do i = 1, m
+        p(i,0,k)  =p(i,n,k)
+        p(i,n+1,k)=p(i,1,k)
       end do
     end do
-  end do
-  !$acc end kernels
+    !$acc end kernels
   
-  !-- EVEN SPACE process
-  !$acc kernels
-  !$acc loop independent
-  do ii = 2, m*n*l, 2 ! evenspace
-  k = (ii - 1) / (m * n)  + 1
-  j = ((ii - 1) / m + 1) - (k - 1) * n
-  i = (ii - (j - 1) * m) - (k - 1) * m * n
-
-  !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
-  if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i - 1
-  p(i,j,k) = (bb(i,j,k) &
-            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
-            / ap(i,j,k)*relux_factor &
-            + p_old(i,j,k)*(1.-relux_factor)
-  
-  end do
-  !$acc end kernels
-
-  ! default periodic condition in yz-direction
-  !$acc kernels
-  !$acc loop independent
-  do k = 1, l
+    ! default periodic condition in xy-direction
+    !$acc kernels
     !$acc loop independent
-    do i = 1, m
-      p(i,0,k)  =p(i,n,k)
-      p(i,n+1,k)=p(i,1,k)
-    end do
-  end do
-  !$acc end kernels
-
-  ! default periodic condition in xy-direction
-  !$acc kernels
-  !$acc loop independent
-  do j = 1, n
-    !$acc loop independent
-    do i = 1, m
-      p(i,j,0)  =p(i,j,l)
-      p(i,j,l+1)=p(i,j,1)
-    end do
-  end do
-  !$acc end kernels
-
-  !$acc kernels
-  !$acc loop independent
-  do k = 0, l+1
-    !$acc loop independent
-    do j = 0, n+1
+    do j = 1, n
       !$acc loop independent
-      do i = 0, m+1
-        p_old(i,j,k) = p(i,j,k)
+      do i = 1, m
+        p(i,j,0)  =p(i,j,l)
+        p(i,j,l+1)=p(i,j,1)
       end do
     end do
-  end do
-  !$acc end kernels
+    !$acc end kernels
   
-
-  !-- ODD SPACE process
-  !$acc kernels
-  !$acc loop independent
-  do ii = 1, m*n*l, 2 ! odd space
+    !$acc kernels
+    !$acc loop independent
+    do k = 0, l+1
+      !$acc loop independent
+      do j = 0, n+1
+        !$acc loop independent
+        do i = 0, m+1
+          p_old(i,j,k) = p(i,j,k)
+        end do
+      end do
+    end do
+    !$acc end kernels
+    
+    !-- EVEN SPACE process
+    !$acc kernels
+    !$acc loop independent
+    do ii = 2, m*n*l, 2 ! evenspace
     k = (ii - 1) / (m * n)  + 1
     j = ((ii - 1) / m + 1) - (k - 1) * n
     i = (ii - (j - 1) * m) - (k - 1) * m * n
   
     !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
-    if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i + 1
+    if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i - 1
     p(i,j,k) = (bb(i,j,k) &
               - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
               - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
@@ -693,278 +638,207 @@ do iter = 1, iter_max
               / ap(i,j,k)*relux_factor &
               + p_old(i,j,k)*(1.-relux_factor)
     
+    end do
+    !$acc end kernels
+  
+    ! default periodic condition in yz-direction
+    !$acc kernels
+    !$acc loop independent
+    do k = 1, l
+      !$acc loop independent
+      do i = 1, m
+        p(i,0,k)  =p(i,n,k)
+        p(i,n+1,k)=p(i,1,k)
+      end do
+    end do
+    !$acc end kernels
+  
+    ! default periodic condition in xy-direction
+    !$acc kernels
+    !$acc loop independent
+    do j = 1, n
+      !$acc loop independent
+      do i = 1, m
+        p(i,j,0)  =p(i,j,l)
+        p(i,j,l+1)=p(i,j,1)
+      end do
+    end do
+    !$acc end kernels
+  
+    !$acc kernels
+    !$acc loop independent
+    do k = 0, l+1
+      !$acc loop independent
+      do j = 0, n+1
+        !$acc loop independent
+        do i = 0, m+1
+          p_old(i,j,k) = p(i,j,k)
+        end do
+      end do
+    end do
+    !$acc end kernels
+    
+  
+    !-- ODD SPACE process
+    !$acc kernels
+    !$acc loop independent
+    do ii = 1, m*n*l, 2 ! odd space
+      k = (ii - 1) / (m * n)  + 1
+      j = ((ii - 1) / m + 1) - (k - 1) * n
+      i = (ii - (j - 1) * m) - (k - 1) * m * n
+    
+      !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
+      if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i + 1
+      p(i,j,k) = (bb(i,j,k) &
+                - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
+                - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
+                - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+                / ap(i,j,k)*relux_factor &
+                + p_old(i,j,k)*(1.-relux_factor)
+      
+    end do
+    !$acc end kernels
+  
+  end do
+  
+  ! default periodic condition in yz-direction
+  !$acc kernels
+  !$acc loop independent
+  do k = 1, l
+    !$acc loop independent
+    do i = 1, m
+      p(i,0,k)  =p(i,n,k)
+      p(i,n+1,k)=p(i,1,k)
+    end do
   end do
   !$acc end kernels
-
-end do
-
-! default periodic condition in yz-direction
-!$acc kernels
-!$acc loop independent
-do k = 1, l
+  
+  ! default periodic condition in xy-direction
+  !$acc kernels
   !$acc loop independent
-  do i = 1, m
-    p(i,0,k)  =p(i,n,k)
-    p(i,n+1,k)=p(i,1,k)
+  do j = 1, n
+    !$acc loop independent
+    do i = 1, m
+      p(i,j,0)  =p(i,j,l)
+      p(i,j,l+1)=p(i,j,1)
+    end do
   end do
-end do
-!$acc end kernels
-
-! default periodic condition in xy-direction
-!$acc kernels
-!$acc loop independent
-do j = 1, n
-  !$acc loop independent
-  do i = 1, m
-    p(i,j,0)  =p(i,j,l)
-    p(i,j,l+1)=p(i,j,1)
-  end do
-end do
-!$acc end kernels
-
-!$acc end data 
-
+  !$acc end kernels
+  
+  !$acc end data 
+  
 end subroutine solve_matrix_vec_oacc
 !******************
 
 !******************
 subroutine  solve_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
- implicit none
- integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
- real,intent(inout),dimension(0:md,0:nd,0:ld):: p
- real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
- integer,intent(in):: m, n, l
+  implicit none
+  integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
+  real,intent(inout),dimension(0:md,0:nd,0:ld):: p
+  real,intent(in),dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb
+  integer,intent(in):: m, n, l
 
-! local variables
-real:: relux_factor, error
-real,dimension(0:md,0:nd,0:ld):: p_old
-integer::i, j, k, iter, iter_max
-
-! ----------------
-!   SOR algorithm
-! ----------------
-iter_max = 300 ! SOR max interation steps
-relux_factor=1.7 ! SOR reluxation factor
-
-do iter = 1, iter_max
-
-  error=0.
+  ! local variables
+  real:: relux_factor, error
+  real,dimension(0:md,0:nd,0:ld):: p_old
+  integer::i, j, k, iter, iter_max
   
-  ! default periodic condition in yz-direction
-  do k = 1, l
-    do i = 1, m
-      p(i,0,k)   = p(i,n,k)
-      p(i,n+1,k) = p(i,1,k)
-    end do
-  end do
-
-  ! default periodic condition in xy-direction
-  do j = 1, n
-    do i = 1, m
-      p(i,j,0)   = p(i,j,l)
-      p(i,j,l+1) = p(i,j,1)
-    end do
-  end do
+  ! ----------------
+  !   SOR algorithm
+  ! ----------------
+  iter_max = 300 ! SOR max interation steps
+  relux_factor=1.7 ! SOR reluxation factor
   
-  do k = 0, l+1
-    do j = 0, n+1
-      do i = 0, m+1
-        p_old(i,j,k) = p(i,j,k)
+  do iter = 1, iter_max
+  
+    error=0.
+    
+    ! default periodic condition in yz-direction
+    do k = 1, l
+      do i = 1, m
+        p(i,0,k)   = p(i,n,k)
+        p(i,n+1,k) = p(i,1,k)
       end do
     end do
-  end do
   
-  do k = 1, l
+    ! default periodic condition in xy-direction
     do j = 1, n
       do i = 1, m
-        p(i,j,k) = (bb(i,j,k) &
-                  - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-                  - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-                  - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
-                  / ap(i,j,k)*relux_factor &
-                  + p_old(i,j,k)*(1.-relux_factor)
-        
-        error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
+        p(i,j,0)   = p(i,j,l)
+        p(i,j,l+1) = p(i,j,1)
       end do
     end do
+    
+    do k = 0, l+1
+      do j = 0, n+1
+        do i = 0, m+1
+          p_old(i,j,k) = p(i,j,k)
+        end do
+      end do
+    end do
+    
+    do k = 1, l
+      do j = 1, n
+        do i = 1, m
+          p(i,j,k) = (bb(i,j,k) &
+                    - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
+                    - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
+                    - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+                    / ap(i,j,k)*relux_factor &
+                    + p_old(i,j,k)*(1.-relux_factor)
+          
+          error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
+        end do
+      end do
+    end do
+    
   end do
   
-end do
-
-write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
-
-if (error > 1e5) then
-  write(*,*)'Error value diverges. Terminate the process.'
-  call exit(0)
-end if
-
+  write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
+  
+  if (error > 1e5) then
+    write(*,*)'Error value diverges. Terminate the process.'
+    call exit(0)
+  end if
+  
 end subroutine solve_matrix
 !******************
 
 !******************
 subroutine  boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
- implicit none
- integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
- real,intent(in)::height
- real,intent(in),dimension(0:md,0:nd,0:ld)::p
- real,intent(inout),dimension(0:md,0:nd,0:ld)::ap, ae, aw, an, as, at, ab, bb
- real,intent(in),dimension(0:nd)::yp
- integer,intent(in)::m, n, l
+  implicit none
+  integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
+  real,intent(in)::height
+  real,intent(in),dimension(0:md,0:nd,0:ld)::p
+  real,intent(inout),dimension(0:md,0:nd,0:ld)::ap, ae, aw, an, as, at, ab, bb
+  real,intent(in),dimension(0:nd)::yp
+  integer,intent(in)::m, n, l
 
-! local variables
-integer::i, j, k
-
-! inlet (dp/x=0 at i=1)
-do k = 1, l
-  do j = 1, n
-    ae(1,j,k) =ae(1,j,k)+aw(1,j,k)
-    aw(1,j,k) =0.
+  ! local variables
+  integer::i, j, k
+  
+  ! inlet (dp/x=0 at i=1)
+  do k = 1, l
+    do j = 1, n
+      ae(1,j,k) =ae(1,j,k)+aw(1,j,k)
+      aw(1,j,k) =0.
+    end do
   end do
-end do
-
-! outlet (p=outlet_pressure at i=m)
-do k = 1, l
-  do j = 1, n
-    bb(m,j,k) = bb(m,j,k)+ae(m,j,k)*p(m+1,j,k)
-    ae(m,j,k) = 0.
-    aw(m,j,k) = 0.
-    an(m,j,k) = 0.
-    as(m,j,k) = 0.
-    at(m,j,k) = 0.
-    ab(m,j,k) = 0.
+  
+  ! outlet (p=outlet_pressure at i=m)
+  do k = 1, l
+    do j = 1, n
+      bb(m,j,k) = bb(m,j,k)+ae(m,j,k)*p(m+1,j,k)
+      ae(m,j,k) = 0.
+      aw(m,j,k) = 0.
+      an(m,j,k) = 0.
+      as(m,j,k) = 0.
+      at(m,j,k) = 0.
+      ab(m,j,k) = 0.
+    end do
   end do
-end do
-
+  
 end subroutine  boundrary_matrix
-!******************
-
-!******************
-subroutine  solve_u (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
-  implicit none
-  integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
-  real,intent(in)::dx, dy, dz, dt
-  real,intent(in)::xnue, density, xlamda
-  real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p, u_old, v_old, w_old
-  real,intent(in),dimension(0:md,0:nd,0:ld)::porosity
-  integer,intent(in)::m, n, l
- 
-  ! local variables
-  integer::i, j, k
-  
-  do k = 1, l
-    do j = 1, n
-      do i = 1, m
-        ! convection_x
-        ! (already calculated in solve_p)
-        
-        ! convection_y
-        ! (already calculated in solve_p)
-
-        ! convection_z
-        ! (already calculated in solve_p)
-        
-        ! diffusion_x
-        ! (already calculated in solve_p)
-        
-        ! diffusion_y
-        ! (already calculated in solve_p)
-        
-        ! diffusion_z
-        ! (already calculated in solve_p)
-        
-        ! pressure
-        u(i,j,k)=u(i,j,k) -dt/density*(p(i+1,j,k)-p(i-1,j,k))/dx*0.5
-      end do
-    end do
-  end do
-
-end subroutine solve_u
-!******************
-
-!******************
-subroutine  solve_v (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
-  implicit none
-  integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
-  real,intent(in)::dx, dy, dz, dt
-  real,intent(in)::xnue, density, xlamda
-  real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p, u_old, v_old, w_old
-  real,intent(in),dimension(0:md,0:nd,0:ld)::porosity
-  integer,intent(in)::m, n, l
-
-  ! local variables
-  integer::i, j, k
-  
-  do k = 1, l
-    do j = 1, n
-      do i = 1, m
-        ! convection_x
-        ! (already calculated in solve_p)
-        
-        ! convection_y
-        ! (already calculated in solve_p)
-
-        ! convection_z
-        ! (already calculated in solve_p)
-        
-        ! diffusion_x
-        ! (already calculated in solve_p)
-        
-        ! diffusion_y
-        ! (already calculated in solve_p)
-        
-        ! diffusion_z
-        ! (already calculated in solve_p)
-        
-        ! pressure
-        v(i,j,k)=v(i,j,k) -dt/density*(p(i,j+1,k)-p(i,j-1,k))/dy*.5
-      end do
-    end do
-  end do
-
-end subroutine solve_v
-!******************
-
-!******************
-subroutine  solve_w (p, u, v, w, u_old, v_old, w_old, porosity, xnue, xlamda, density, dx, dy, dz, dt, m, n, l)
-  implicit none
-  integer,parameter::md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
-  real,intent(in)::dx, dy, dz, dt
-  real,intent(in)::xnue, density, xlamda
-  real,intent(inout),dimension(0:md,0:nd,0:ld)::u, v, w, p, u_old, v_old, w_old
-  real,intent(in),dimension(0:md,0:nd,0:ld)::porosity
-  integer,intent(in)::m, n, l
-
-  ! local variables
-  integer::i, j, k
-  
-  do k = 1, l
-    do j = 1, n
-      do i = 1, m
-        ! convection_x
-        ! (already calculated in solve_p)
-        
-        ! convection_y
-        ! (already calculated in solve_p)
-
-        ! convection_z
-        ! (already calculated in solve_p)
-        
-        ! diffusion_x
-        ! (already calculated in solve_p)
-        
-        ! diffusion_y
-        ! (already calculated in solve_p)
-        
-        ! diffusion_z
-        ! (already calculated in solve_p)
-
-        ! pressure
-        w(i,j,k)=w(i,j,k) -dt/density*(p(i,j,k+1)-p(i,j,k-1))/dz*.5
-      end do
-    end do
-  end do
-
-end subroutine solve_w
 !******************
 
 !  conditions  
