@@ -1422,7 +1422,7 @@ subroutine  output_paraview (p, u, v, w, porosity, xp, yp, zp, m, n, l)
       do i = 1, m
         div(i,j,k)= (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
                    +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-                   +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+                   +(w(i,j,k+1)-w(i,j,k-1))/(zp(k+1)-zp(k-1))
       end do
     end do
   end do
@@ -1591,7 +1591,7 @@ subroutine  output_paraview_temp (p, u, v, w, porosity, xp, yp, zp, m, n, l, ist
       do i = 1, m
         div(i,j,k) = (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
                    + (v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-                   + (v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+                   + (w(i,j,k+1)-w(i,j,k-1))/(zp(k+1)-zp(k-1))
       end do
     end do
   end do
