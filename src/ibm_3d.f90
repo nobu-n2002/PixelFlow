@@ -241,12 +241,6 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                             *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                             &
                           + div(i,j,k)*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5*xlamda                 &
                      )/porosity(i,j,k)
-  
-        !-- force on wall
-        if(nonslip) then
-          u(i,j,k) = u(i,j,k) - dt*xnue*u_old(i,j,k)/(thickness*dx)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-        end if
-
       end do
     end do
   end do
@@ -293,11 +287,6 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                            *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                            &
                          + div(i,j,k)*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5*xlamda                &
                      )/porosity(i,j,k)
-        !-- force on wall
-        if(nonslip) then
-          v(i,j,k) = v(i,j,k) - dt*xnue*v_old(i,j,k)/(thickness*dy)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-        end if
-
       end do
     end do
   end do
@@ -344,15 +333,26 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                             *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                             &
                           + div(i,j,k)*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5*xlamda                 &
                      )/porosity(i,j,k)
-        ! force on wall
-        if (nonslip) then
-          w(i,j,k)=w(i,j,k)- dt*xnue*w_old(i,j,k)/(thickness*dz)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-        end if
-    
       end do
     end do
   end do
   
+
+  ! ----------------
+  !   force on wall
+  ! ----------------
+  if (nonslip) then
+    do k = 1, l
+      do j = 1, n
+        do i = 1, m
+          u(i,j,k) = u(i,j,k) - dt*xnue*u_old(i,j,k)/(thickness*dx)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+          v(i,j,k) = v(i,j,k) - dt*xnue*v_old(i,j,k)/(thickness*dy)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+          w(i,j,k) = w(i,j,k) - dt*xnue*w_old(i,j,k)/(thickness*dz)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+        end do
+      end do
+    end do
+  end if
+
 
   ! ----------------
   ! matrix solution  !  formulation of porous media
@@ -360,30 +360,21 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
     do j = 1, n
       do i = 1, m
         ae(i,j,k) = dt*max(small,(porosity(i+1,j,k)+porosity(i,j,k))*0.5)/dx/dx
-    
         aw(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i-1,j,k))*0.5)/dx/dx
-    
         an(i,j,k) = dt*max(small,(porosity(i,j+1,k)+porosity(i,j,k))*0.5)/dy/dy
-    
         as(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i,j-1,k))*0.5)/dy/dy
-    
         at(i,j,k) = dt*max(small,(porosity(i,j,k+1)+porosity(i,j,k))*0.5)/dz/dz
-    
         ab(i,j,k) = dt*max(small,(porosity(i,j,k)+porosity(i,j,k-1))*0.5)/dz/dz
-    
         ap(i,j,k) = -ae(i,j,k)-aw(i,j,k)-an(i,j,k)-as(i,j,k)-at(i,j,k)-ab(i,j,k)
-    
         bb(i,j,k) = ((porosity(i+1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i+1,j,k))*0.5              &
                      -(porosity(i-1,j,k)*u(i,j,k)+porosity(i,j,k)*u(i-1,j,k))*0.5)*density/dx &
                     +((porosity(i,j+1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j+1,k))*0.5             &
                      -(porosity(i,j-1,k)*v(i,j,k)+porosity(i,j,k)*v(i,j-1,k))*0.5)*density/dy &
                     +((porosity(i,j,k+1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k+1))*0.5             &
                      -(porosity(i,j,k-1)*w(i,j,k)+porosity(i,j,k)*w(i,j,k-1))*0.5)*density/dz 
-    
       end do
     end do
   end do
-  
 
   call boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
   
