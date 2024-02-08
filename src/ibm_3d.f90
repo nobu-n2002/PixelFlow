@@ -43,7 +43,7 @@ program main
     density=0.  ! setup switch for physical conditions
   
     call physical_conditions (xnue, xlamda, density, width, height, depth, time &
-                          , inlet_velocity, outlet_pressure, AoA, m, n, l)
+                          , inlet_velocity, outlet_pressure, AoA)
     call grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, height, depth, thickness, time &
                           , inlet_velocity, AoA, porosity, m, n, l, istep_max, iset)
     ! call output_grid_list (xp, yp, zp, m, n, l, angle_of_attack)
@@ -58,7 +58,7 @@ program main
   density=0.  ! setup switch for physical conditions
   
   call physical_conditions (xnue, xlamda, density, width, height, depth, time &
-                        , inlet_velocity, outlet_pressure, AoA, m, n, l)
+                        , inlet_velocity, outlet_pressure, AoA)
   call grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, height, depth, thickness, time &
                        , inlet_velocity, AoA, porosity, m, n, l, istep_max, iset)
   call output_grid (xp, yp, zp, m, n, l)  
@@ -853,15 +853,23 @@ subroutine  boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height
   ! local variables
   integer::i, j, k
   
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(m, n, l, height) &
+  !$omp & shared(p, ap, ae, aw, an, as, at, ab, bb, yp) &
+  !$omp & default(none)
+
   ! inlet (dp/x=0 at i=1)
+  !$omp do
   do k = 1, l
     do j = 1, n
       ae(1,j,k) =ae(1,j,k)+aw(1,j,k)
       aw(1,j,k) =0.
     end do
   end do
+  !$omp end do
   
   ! outlet (p=outlet_pressure at i=m)
+  !$omp do
   do k = 1, l
     do j = 1, n
       bb(m,j,k) = bb(m,j,k)+ae(m,j,k)*p(m+1,j,k)
@@ -873,6 +881,9 @@ subroutine  boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height
       ab(m,j,k) = 0.
     end do
   end do
+  !$omp end do
+
+  !$omp end parallel
   
 end subroutine  boundrary_matrix
 !******************
@@ -893,15 +904,21 @@ subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
   integer,intent(in)::m, n, l
 
   ! local variables
-  real, parameter::small=1.e-6, big=1.e6, zero=0., pai=atan(1.)*4.
+  real, parameter :: pi=atan(1.)*4.
   integer::i, j, k
   
-  ! ----------------
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(p, u, v, w, xp, yp, zp) &
+  !$omp & shared(width, height, depth, inlet_velocity, outlet_pressure) &
+  !$omp & shared(AoA, porosity, m, n, l, pi) &
+  !$omp & default(none)
+
   ! inlet (u=inlet_velocity, v=0., dp/dx=0 at i=1)
+  !$omp do
   do k = 1, l
     do j = 1, n
-      u(1,j,k) = inlet_velocity*cos(AoA/1300.*pai)
-      v(1,j,k) = inlet_velocity*sin(AoA/1300.*pai)
+      u(1,j,k) = inlet_velocity*cos(AoA/1300.*pi)
+      v(1,j,k) = inlet_velocity*sin(AoA/1300.*pi)
       w(1,j,k) = 0.
       u(0,j,k) = u(1,j,k)    ! dummy
       v(0,j,k) = v(1,j,k)    ! dummy
@@ -909,8 +926,10 @@ subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
       p(0,j,k) = p(2,j,k)
     end do
   end do
+  !$omp end do
   
   ! outlet (du/dx=0., dv/dx=0., p=outlet_pressure at i=m)
+  !$omp do
   do k = 1, l
     do j = 1, n
       u(m+1,j,k) = u(m-1,j,k)
@@ -919,8 +938,10 @@ subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
       p(m+1,j,k) = outlet_pressure   ! dummy
     end do
   end do
+  !$omp end do
 
   ! default: periodic condition (xz-direction at j=1 & n)
+  !$omp do
   do k = 0, l+1
     do i = 0, m+1
       u(i,0,k)   = u(i,n,k)
@@ -933,8 +954,10 @@ subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
       p(i,n+1,k) = p(i,1,k)
     end do
   end do
+  !$omp end do
 
   ! default: periodic condition (xy-direction at k=1 & l)
+  !$omp do
   do j = 0, n+1
     do i = 0, m+1
       u(i,j,0)   = u(i,j,l)
@@ -947,55 +970,46 @@ subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
       p(i,j,l+1) = p(i,j,1)
     end do
   end do
+  !$omp end do
+
+  !$omp end parallel
   
 end subroutine boundary
 !*****************************
 
 !*****************************
 subroutine physical_conditions(xnue, xlamda, density, width, height, depth, time &
-                              , inlet_velocity, outlet_pressure, AoA, m, n, l)
- implicit none
- integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
- real,intent(inout):: xnue, xlamda, density
- real,intent(inout):: width, height, depth
- real,intent(inout):: time, inlet_velocity, outlet_pressure, AoA
- integer,intent(in):: m, n, l
-! local variables
-! integer:: i, j, k
+                              , inlet_velocity, outlet_pressure, AoA)
+  implicit none
+  integer,parameter:: md=300, nd = 300, ld = 300     ! md, nd > grid size (m,n)
+  real,intent(inout):: xnue, xlamda, density
+  real,intent(inout):: width, height, depth
+  real,intent(inout):: time, inlet_velocity, outlet_pressure, AoA
 
-! ----------------
-
-! ----------------
-! read input file 
-! by Nobuto Nakamichi 4/7/2023
-namelist /physical/xnue, xlamda, density, width, height, depth, time  &
-                 ,inlet_velocity, outlet_pressure, AoA
-
-if (density == 0.)then
-
-  open(11,file="config/controlDict.txt",status="old",action="read")
-  read(11,nml=physical)
-  close(11)
-
-end if
-
-! ----------------
-
-write(*,*) 
-write(*,*) 'xnue =', xnue
-write(*,*) 'xlamda =', xlamda
-write(*,*) 'density =', density
-write(*,*) 'width =', width
-write(*,*) 'height =', height
-write(*,*) 'depth =', depth
-write(*,*) 'time =', time
-write(*,*) 'inlet_velocity =', inlet_velocity
-write(*,*) 'outlet_pressure =', outlet_pressure
-write(*,*) 'Angle of inlet_velocity (AoA) =', AoA
-
-! ----------------
-
-return
+  ! ----------------
+  ! read input file 
+  ! by Nobuto Nakamichi 4/7/2023
+  namelist /physical/xnue, xlamda, density, width, height, depth, time  &
+                   ,inlet_velocity, outlet_pressure, AoA
+  
+  if (density == 0.)then
+    open(11,file="config/controlDict.txt",status="old",action="read")
+    read(11,nml=physical)
+    close(11)
+  end if
+  
+  write(*,*) 
+  write(*,*) 'xnue =', xnue
+  write(*,*) 'xlamda =', xlamda
+  write(*,*) 'density =', density
+  write(*,*) 'width =', width
+  write(*,*) 'height =', height
+  write(*,*) 'depth =', depth
+  write(*,*) 'time =', time
+  write(*,*) 'inlet_velocity =', inlet_velocity
+  write(*,*) 'outlet_pressure =', outlet_pressure
+  write(*,*) 'Angle of inlet_velocity (AoA) =', AoA
+  
 end subroutine physical_conditions
 !******************
 
@@ -1020,7 +1034,6 @@ subroutine  grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, h
   integer:: i, j, k
   integer:: x, y, z
   real:: poro_val, threshold
-  real, parameter:: small=1.e-6, big=1.e6, zero=0.
   ! --- 
 
   ! ----------------
@@ -1073,33 +1086,50 @@ subroutine  grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, h
   write(*,*) 'thickness =', thickness
   write(*,*) 'threshold =', threshold
   
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(xp, yp, zp, porosity) &
+  !$omp & shared(dx, dy, dz, dt, width, height, depth,m, n, l) &
+  !$omp & default(none)
+  
+  !$omp do
   do i = 0, m+1
     xp(i) = dx * real(i-1) - width*0.5
   end do
+  !$omp end do
   
+  !$omp do
   do j = 0, n+1
     yp(j) = dy * real(j-1) - height*0.5
   end do
+  !$omp end do
 
+  !$omp do
   do k = 0, l+1
     zp(k) = dz * real(k-1) - depth*0.5
   end do
+  !$omp end do
   
   ! default: outlet condtion in x-direction
+  !$omp do
   do k = 1, l+1
     do j = 1, n+1
       porosity(0,j,k)   = porosity(1,j,k)
       porosity(m+1,j,k) = porosity(m,j,k)
     end do
   end do
+  !$omp do
   
   ! default: periodic condtion in y-direction
+  !$omp do
   do k = 0, l+1
     do i = 0, m+1
       porosity(i,0,k)   = porosity(i,n,k)
       porosity(i,n+1,k) = porosity(i,1,k)
     end do
   end do
+  !$omp do
+
+  !$omp end parallel
   
 end subroutine  grid_conditions
 !******************
@@ -1118,18 +1148,28 @@ subroutine  initial_conditions (p, u, v, w, xp, yp, zp, width, height, depth  &
 
   ! local variables
   integer::i, j, k
-  real, parameter :: pai=atan(1.)*4.   
+  real, parameter :: pi=atan(1.)*4.   
   
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(p, u, v, w, xp, yp, zp) &
+  !$omp & shared(inlet_velocity, outlet_pressure, AoA, m, n, l) &
+  !$omp & shared(width, height, depth, pi) &
+  !$omp & default(none)
+
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
-        u(i,j,k) = inlet_velocity * cos(AoA/1300*pai)
-        v(i,j,k) = inlet_velocity * sin(AoA/1300*pai)
+        u(i,j,k) = inlet_velocity * cos(AoA/1300*pi)
+        v(i,j,k) = inlet_velocity * sin(AoA/1300*pi)
         w(i,j,k) = 0.
         p(i,j,k) = outlet_pressure
       end do
     end do
   end do
+  !$omp end do
+
+  !$omp end parallel
 
 end subroutine initial_conditions
 !******************
@@ -1255,16 +1295,18 @@ subroutine  output_solution_post (p, u, v, w, xp, yp, zp, porosity, m, n, l)
   integer,intent(in)::m, n, l
 
   ! local variables
-  real, parameter::small=1.e-6, big=1.e6, zero=0.
+  real, parameter::small=1.e-6, zero=0.
   real, parameter::pmin=0.25, pmax=0.75
   integer::i, j, k
   real,dimension(0:md, 0:nd, 0:ld)::u_cnt, v_cnt, w_cnt, p_cnt
   
-  open (61, file='etc/solution_uvp.dat', status='replace')
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(p, u, v, w, xp, yp, zp, porosity) &
+  !$omp & shared(u_cnt, v_cnt, w_cnt, p_cnt) &
+  !$omp & shared(small, zero) &
+  !$omp & default(none)
   
-  ! ----------------
-  ! interpolation at p-center grid
-  
+  !$omp do 
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -1279,7 +1321,9 @@ subroutine  output_solution_post (p, u, v, w, xp, yp, zp, porosity, m, n, l)
       end do
     end do
   end do
+  !$omp end do
   
+  !$omp do
   do k = 1, l
     do j = 1, n
       u_cnt(0,j,k) = u_cnt(1,j,k)
@@ -1292,7 +1336,9 @@ subroutine  output_solution_post (p, u, v, w, xp, yp, zp, porosity, m, n, l)
       p_cnt(m+1,j,k) = p_cnt(m,j,k)
     end do
   end do
+  !$omp end do
   
+  !$omp do
   do i = 0, m+1
     u_cnt(i,0,k) = u_cnt(i,1,k)
     v_cnt(i,0,k) = v_cnt(i,1,k)
@@ -1303,7 +1349,13 @@ subroutine  output_solution_post (p, u, v, w, xp, yp, zp, porosity, m, n, l)
     w_cnt(i,n+1,k) = w_cnt(i,n,k)
     p_cnt(i,n+1,k) = p_cnt(i,n,k)
   end do
+  !$omp end do
+
+  !$omp end parallel
+
   
+  open (61, file='etc/solution_uvp.dat', status='replace')
+
   !-----------------
   write(61,*)'m, n, l =', m, n, l
   
@@ -1453,15 +1505,21 @@ subroutine  output_paraview (p, u, v, w, porosity, xp, yp, zp, m, n, l)
     enddo
   enddo
  
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(div, u, v, w, xp, yp, zp, m, n, l) &
+  !$omp & default(none)
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
-        div(i,j,k)= (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
-                   +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-                   +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+        div(i,j,k) = (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
+                     +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
+                     +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
       end do
     end do
   end do
+  !$omp end do
+  !$omp end parallel
  
   !-- divergent velocity
   write(50,"('SCALARS VelocityDivergent float')")
@@ -1504,9 +1562,10 @@ subroutine  output_divergent (p, u, v, w, porosity, dx, dy, dz, m, n, l)
   integer::i, j, k
   real,dimension(0:md,0:nd,0:ld)::div
   
-  open (62, file='etc/divergent.dat', status='replace')
-  ! ----------------
-  
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(div, u, v, w, porosity, m, n, l, dx, dy, dz) &
+  !$omp & default(none)
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -1519,7 +1578,11 @@ subroutine  output_divergent (p, u, v, w, porosity, dx, dy, dz, m, n, l)
       end do
     end do
   end do
+  !$omp end do
+  !$omp end parallel
   
+  open (62, file='etc/divergent.dat', status='replace')
+
   write(62,*)
   write(62,*)'porosity'
   do k = 1, l
@@ -1622,6 +1685,10 @@ subroutine  output_paraview_temp (p, u, v, w, porosity, xp, yp, zp, m, n, l, ist
     enddo
   enddo
 
+  !$omp parallel private(i, j, k) &
+  !$omp & shared(div, u, v, w, xp, yp, zp, m, n, l) &
+  !$omp & default(none)
+  !$omp do
   do k = 1, l
     do j = 1, n
       do i = 1, m
@@ -1631,6 +1698,8 @@ subroutine  output_paraview_temp (p, u, v, w, porosity, xp, yp, zp, m, n, l, ist
       end do
     end do
   end do
+  !$omp end do
+  !$omp end parallel
 
   !-- divergent velocity
   write(65,"('SCALARS VelocityDivergent float')")
