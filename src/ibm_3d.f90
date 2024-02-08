@@ -1573,7 +1573,7 @@ program main
   do k=1,l
    div(i,j,k)= (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
               +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-              +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+              +(w(i,j,k+1)-w(i,j,k-1))/(zp(k+1)-zp(k-1))
   end do
   end do
   end do
@@ -1743,7 +1743,7 @@ program main
   do k=1,l
   div(i,j,k)= (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
             +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-            +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+            +(w(i,j,k+1)-w(i,j,k-1))/(zp(k+1)-zp(k-1))
   end do
   end do
   end do
