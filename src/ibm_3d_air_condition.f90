@@ -1,25 +1,34 @@
 module global
-  !$ use omp_lib
   implicit none
-  integer, parameter:: md=260, nd=160, ld=60
+  integer, parameter:: md=257, nd=257, ld=257
+  ! wall condition:
+  ! 0: wall 
+  ! 1: inlet (@poro>=0.9 then inlet, @poro<0.9 then wall)
+  ! 2: outlet (@poro>=0.9 then p = outlet_pressure, @poro<0.9 then wall)
+  integer, parameter:: top_wall     = 1
+  integer, parameter:: bottom_wall  = 0
+  integer, parameter:: east_wall    = 0
+  integer, parameter:: west_wall    = 0
+  integer, parameter:: south_wall   = 2
+  integer, parameter:: north_wall   = 0
 end module global
 
 program main
-  use global
   !$ use omp_lib
-   implicit none
-   real:: dx, dy, dz, dt
-   real:: xnue, xlamda, density, width, height, depth, time
-   real:: inlet_velocity, outlet_pressure, AoA, thickness
-   real,dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old
-   real,dimension(0:md,0:nd,0:ld):: porosity
-   real,dimension(0:md):: xp
-   real,dimension(0:nd):: yp
-   real,dimension(0:ld):: zp
-   integer:: m, n, l, istep, istep_max, iset, istep_out
-   integer:: i, j, k
-   character(len=50) :: output_folder
-   character(len=50) :: csv_file
+  use global
+  implicit none
+  real:: dx, dy, dz, dt
+  real:: xnue, xlamda, density, width, height, depth, time
+  real:: inlet_velocity, outlet_pressure, AoA, thickness
+  real,dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old
+  real,dimension(0:md,0:nd,0:ld):: porosity
+  real,dimension(0:md):: xp
+  real,dimension(0:nd):: yp
+  real,dimension(0:ld):: zp
+  integer:: m, n, l, istep, istep_max, iset, istep_out
+  integer:: i, j, k
+  character(len=50) :: output_folder
+  character(len=50) :: csv_file
   ! ----------------
   ! read input data by using namelist 
   namelist /file_control/istep_out
@@ -34,7 +43,6 @@ program main
   ! write(*,*)'porosity setting:0 or calculation start:1 ?'
   ! read(*,*) iset
   ! make output directory
-  
   call system('mkdir -p '//trim(output_folder))
   call system('mkdir -p etc')
   ! -----------------
@@ -133,6 +141,7 @@ end program main
 !******************
 subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   xnue, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
+  !$ use omp_lib
   use global
   implicit none
   real,intent(in):: dx, dy, dz, dt
@@ -147,7 +156,6 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   real, parameter:: small = 1.e-6, big = 1.e6, zero = 0.0
   real, parameter::alpha = 32.0
 
-  real:: u_stg, v_stg
   real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
   integer:: i, j, k
   real:: xlamda
@@ -229,7 +237,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   ! ----------------
   !   velocity u
   ! ----------------
-  ! convection_x  (1st upwind scheme)
+  ! convection_x
   u(i,j,k)=u_old(i,j,k)-dt*(u_old(i,j,k)*(u_old(i+1,j,k)-u_old(i-1,j,k))/dx*0.5)    ! 2nd central scheme
   
   ! convection_y
@@ -268,7 +276,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   ! ----------------
   !   velocity v
   ! ----------------
-  ! convection_x  (1st upwind scheme)
+  ! convection_x
   v(i,j,k)=v_old(i,j,k)-dt*(u_old(i,j,k)*(v_old(i+1,j,k)-v_old(i-1,j,k))/dx*0.5)       ! 2nd central scheme
 
   ! convection_y
@@ -286,7 +294,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   ! diffusion_z
   v(i,j,k)=v(i,j,k) +dt*xnue*(v_old(i,j,k+1)-2.*v_old(i,j,k)+v_old(i,j,k-1))/dz/dz
   !      +dt*xnue/(small+porosity(i,j,k))*(v_old(i,j,k+1)-v_old(i,j,k-1))*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz/dz*0.25 ! non-conseved term
-  ! divergence term   ! L+(2/3)N = (1/3)N;(2/3) or 0(1/3)
+  ! divergence term
   v(i,j,k)=v(i,j,k) +dt*(xnue + xlamda)*(div(i,j+1,k)-div(i,j-1,k))/dy*.5
   ! additional terms by porosity profile   ! canceled for non-slip condition    ! L+(2/3)N = (1/3)N;(-1/3) or 0:(-2/3)N
   v(i,j,k)=v(i,j,k)               &
@@ -312,7 +320,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   w(i,j,k)=w(i,j,k)-dt*(v_old(i,j,k)*(w_old(i,j+1,k)-w_old(i,j-1,k))/dy/2.)        ! 2nd central scheme
 
   ! convection_z
-  w(i,j,k)=w(i,j,k)-dt*(w_old(i,j,k)*(w_old(i,j,k+1)-w_old(i,j,k-1))/dz/2.   )     ! 2nd central scheme
+  w(i,j,k)=w(i,j,k)-dt*(w_old(i,j,k)*(w_old(i,j,k+1)-w_old(i,j,k-1))/dz/2.)     ! 2nd central scheme
   
   ! diffusion_x
   w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i+1,j,k)-2.*w_old(i,j,k)+w_old(i-1,j,k))/dx/dx
@@ -755,100 +763,168 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
   ! top
   do i = 0, m+1
     do j = 0, n+1
-      ! --- wall (dp/dz=0. at k=l)
-      ab(i,j,l) =ab(i,j,l)+at(i,j,l)
-      at(i,j,l) =0.
-      ! ---
+      if (top_wall == 0 .or. top_wall == 1) then
+        ! --- wall (dp/dz=0. at k=l)
+        ab(i,j,l) =ab(i,j,l)+at(i,j,l)
+        at(i,j,l) =0.
+        ! ---
+      else if (top_wall == 2) then
+        if (porosity(i,j,l) < 0.9) then
+          ! --- wall (dp/dz=0. at k=1)
+          ab(i,j,l) =ab(i,j,l)+at(i,j,l)
+          at(i,j,l) =0.
+          ! ---          
+        else
+          ! --- outlet (p=outlet_pressure at i=m)
+          bb(i,j,l) = bb(i,j,1) + at(i,j,l) * p(i,j,l+1)
+          ae(i,j,l) = 0.
+          aw(i,j,l) = 0.
+          an(i,j,l) = 0.
+          as(i,j,l) = 0.
+          at(i,j,l) = 0.
+          ab(i,j,l) = 0.
+          ! ---
+        end if
+      end if
     end do
   end do
 
   ! bottom
   do i = 0, m+1
     do j = 0, n+1
-      ! --- wall (dp/dz=0. at k=1)
-      at(i,j,1) = at(i,j,1)+ab(i,j,1)
-      ab(i,j,1) = 0.
-      ! ---
+      if (bottom_wall == 0 .or. bottom_wall == 1) then
+        ! --- wall (dp/dz=0. at k=1)
+        at(i,j,1) = at(i,j,1)+ab(i,j,1)
+        ab(i,j,1) = 0.
+        ! ---
+      else if (bottom_wall == 2) then
+        if (porosity(i,j,1) < 0.9) then
+          ! --- wall (dp/dz=0. at k=1)
+          at(i,j,1) = at(i,j,1)+ab(i,j,1)
+          ab(i,j,1) = 0.
+          ! ---          
+        else
+          ! --- outlet (p=outlet_pressure at i=m)
+          bb(i,j,1) = bb(i,j,1) + ab(i,j,1) * p(i,j,0)
+          ae(i,j,1) = 0.
+          aw(i,j,1) = 0.
+          an(i,j,1) = 0.
+          as(i,j,1) = 0.
+          at(i,j,1) = 0.
+          ab(i,j,1) = 0.
+          ! ---
+        end if
+      end if
     end do
   end do
 
   ! east
   do j = 0, n+1
     do k = 0, l+1
+      if (east_wall == 0 .or. east_wall == 1) then
       ! --- wall (dp/dx=0. at i=m)
       aw(m,j,k) = aw(m,j,k)+ae(m,j,k)
       ae(m,j,k) = 0.
       ! ---
-
-      ! --- outlet (p=outlet_pressure at i=m)
-      ! bb(m,j,k) = bb(m,j,k) + ae(m,j,k) * p(m+1,j,k)
-      ! ae(m,j,k) = 0.
-      ! aw(m,j,k) = 0.
-      ! an(m,j,k) = 0.
-      ! as(m,j,k) = 0.
-      ! at(m,j,k) = 0.
-      ! ab(m,j,k) = 0.
-      ! ---
+      else if (east_wall == 2) then
+        if (porosity(m,j,k) < 0.9) then
+          ! --- wall (dp/dx=0. at i=m)
+          aw(m,j,k) = aw(m,j,k)+ae(m,j,k)
+          ae(m,j,k) = 0.
+          ! ---          
+        else
+          ! --- outlet (p=outlet_pressure at i=m)
+          bb(m,j,k) = bb(m,j,k) + ae(m,j,k) * p(m+1,j,k)
+          ae(m,j,k) = 0.
+          aw(m,j,k) = 0.
+          an(m,j,k) = 0.
+          as(m,j,k) = 0.
+          at(m,j,k) = 0.
+          ab(m,j,k) = 0.
+          ! ---
+        end if
+      end if
     end do
   end do
 
   ! west 
   do j = 0, n+1
     do k = 0, l+1
-      ! --- wall (dp/dx=0. at i=1)
-      ae(1,j,k) = ae(1,j,k)+aw(1,j,k)
-      aw(1,j,k) = 0.
-      ! ---
-
-      ! --- outlet (p=outlet_pressure at i=1)
-      ! bb(1,j,k) = bb(1,j,k) + aw(1,j,k) * p(0,j,k)
-      ! ae(1,j,k) = 0.
-      ! aw(1,j,k) = 0.
-      ! an(1,j,k) = 0.
-      ! as(1,j,k) = 0.
-      ! at(1,j,k) = 0.
-      ! ab(1,j,k) = 0.
-      ! ---
+      if (west_wall == 0 .or. west_wall == 1) then
+        ! --- wall (dp/dx=0. at i=1)
+        ae(1,j,k) = ae(1,j,k)+aw(1,j,k)
+        aw(1,j,k) = 0.
+        ! ---
+      else if (west_wall == 2) then
+        if (porosity(1,j,k) < 0.9) then
+          ! --- wall (dp/dx=0. at i=1)
+          ae(1,j,k) = ae(1,j,k)+aw(1,j,k)
+          aw(1,j,k) = 0.
+          ! ---
+        else
+          ! --- outlet (p=outlet_pressure at i=1)
+          bb(1,j,k) = bb(1,j,k) + aw(1,j,k) * p(0,j,k)
+          ae(1,j,k) = 0.
+          aw(1,j,k) = 0.
+          an(1,j,k) = 0.
+          as(1,j,k) = 0.
+          at(1,j,k) = 0.
+          ab(1,j,k) = 0.
+          ! ---
+        end if
+      end if
     end do
   end do
 
   ! north 
   do i = 0, m+1
     do k = 0, l+1
-      ! --- wall (dp/dy=0. at j=n)
-      as(i,n,k) = as(i,n,k)+an(i,n,k)
-      an(i,n,k) = 0.
-      ! ---
-
-      ! outlet (p=outlet_pressure at j=n)
-      ! bb(i,n,k) = bb(i,n,k) + an(i,n,k) * p(i,n+1,k)
-      ! ae(i,n,k) = 0.
-      ! aw(i,n,k) = 0.
-      ! an(i,n,k) = 0.
-      ! as(i,n,k) = 0.
-      ! at(i,n,k) = 0.
-      ! ab(i,n,k) = 0.
+      if (north_wall == 0 .or. north_wall == 1) then
+        ! --- wall (dp/dy=0. at j=n)
+        as(i,n,k) = as(i,n,k)+an(i,n,k)
+        an(i,n,k) = 0.
+        ! ---
+      else if (north_wall == 2) then
+        if (porosity(i,n,k) < 0.9) then
+          ! --- wall (dp/dy=0. at j=n)
+          as(i,n,k) = as(i,n,k)+an(i,n,k)
+          an(i,n,k) = 0.
+          ! ---
+        else
+          ! --- outlet (p=outlet_pressure at j=n)
+          bb(i,n,k) = bb(i,n,k) + an(i,n,k) * p(i,n+1,k)
+          ae(i,n,k) = 0.
+          aw(i,n,k) = 0.
+          an(i,n,k) = 0.
+          as(i,n,k) = 0.
+          at(i,n,k) = 0.
+          ab(i,n,k) = 0.
+        end if
+      end if
     end do
   end do
 
   ! south
   do i = 0, m+1
     do k = 0, l+1
-      ! --- wall (dp/dy=0. at j=1)
-      if (porosity(i,1,k) < 0.9) then
+      if (south_wall == 0 .or. south_wall == 1) then
         an(i,1,k) = an(i,1,k)+as(i,1,k)
-        as(i,1,k) = 0.
-      end if
-      ! ---
-      ! south outlet (p=outlet_pressure at j=1)          
-      if (porosity(i,1,k) >= 0.9) then
-        bb(i,1,k) = bb(i,1,k) + as(i,1,k) * p(i,0,k)
-        ae(i,1,k) = 0.
-        aw(i,1,k) = 0.
-        an(i,1,k) = 0.
-        as(i,1,k) = 0.
-        at(i,1,k) = 0.
-        ab(i,1,k) = 0.
+        as(i,1,k) = 0.        
+      else if (south_wall == 2) then
+        ! --- wall (dp/dy=0. at j=1)
+        if (porosity(i,1,k) < 0.9) then
+          an(i,1,k) = an(i,1,k)+as(i,1,k)
+          as(i,1,k) = 0.
+        else
+        ! --- outlet (p=outlet_pressure at j=1)          
+          bb(i,1,k) = bb(i,1,k) + as(i,1,k) * p(i,0,k)
+          ae(i,1,k) = 0.
+          aw(i,1,k) = 0.
+          an(i,1,k) = 0.
+          as(i,1,k) = 0.
+          at(i,1,k) = 0.
+          ab(i,1,k) = 0.
+        end if
       end if
     end do
   end do
@@ -1016,194 +1092,279 @@ subroutine  boundary(p, u, v, w, xp, yp, zp, width, height, depth    &
   ! top
   do i = 0, m+1
     do j = 0, n+1
-      ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=l, @poro<0.9 (solid))
-      if (porosity(i,j,l) < 0.9) then
+      if (top_wall == 0) then
+        ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=l, @poro<0.9 (solid))
         u(i,j,l) = 0.
         v(i,j,l) = 0.
         w(i,j,l) = 0.
         w(i,j,l+1) =-w(i,j,l-1) ! dummy
         p(i,j,l+1) = p(i,j,l-1) ! dummy
+      else if (top_wall == 1) then
+        if (porosity(i,j,l) >= 0.9) then
+        ! --- inlet (w=inlet_velocity, u,v=0., dp/dz=0 at i=l, @poro>=0.9 (fluid))
+          u(i,j,l) =0.
+          v(i,j,l) =0.
+          w(i,j,l) =-inlet_velocity
+          u(i,j,l+1) =u(i,j,l)  ! dummy
+          v(i,j,l+1) =v(i,j,l)  ! dummy
+          w(i,j,l+1) =w(i,j,l)  ! dummy
+          p(i,j,l+1) =p(i,j,l-1)  ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=l, @poro<0.9 (solid))
+          u(i,j,l) = 0.
+          v(i,j,l) = 0.
+          w(i,j,l) = 0.
+          w(i,j,l+1) =-w(i,j,l-1) ! dummy
+          p(i,j,l+1) = p(i,j,l-1) ! dummy
+        end if
+      else if (top_wall == 2) then
+        if (porosity(i,j,l) >= 0.9) then
+        ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at k=l)
+          u(i,j,l+1) =u(i,j,l-1)  ! dummy
+          v(i,j,l+1) =v(i,j,l-1)  ! dummy
+          w(i,j,l+1) =w(i,j,l-1)  ! dummy
+          p(i,j,l+1) =outlet_pressure ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=l, @poro<0.9 (solid))
+          u(i,j,l) = 0.
+          v(i,j,l) = 0.
+          w(i,j,l) = 0.
+          w(i,j,l+1) =-w(i,j,l-1) ! dummy
+          p(i,j,l+1) = p(i,j,l-1) ! dummy
+        end if
       end if
-      ! ---
-      ! --- inlet (w=inlet_velocity, u,v=0., dp/dz=0 at i=l, @poro>=0.9 (fluid))
-      if (porosity(i,j,l) >= 0.9) then
-        u(i,j,l) =0.
-        v(i,j,l) =0.
-        w(i,j,l) =inlet_velocity
-        u(i,j,l+1) =u(i,j,l)  ! dummy
-        v(i,j,l+1) =v(i,j,l)  ! dummy
-        w(i,j,l+1) =w(i,j,l)  ! dummy
-        p(i,j,l+1) =p(i,j,l-1)  ! dummy
-      end if
-      ! ---
-      ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at k=l)
-      ! u(i,j,l+1) =u(i,j,l-1)  ! dummy
-      ! v(i,j,l+1) =v(i,j,l-1)  ! dummy
-      ! w(i,j,l+1) =w(i,j,l-1)  ! dummy
-      ! p(i,j,l+1) =outlet_pressure ! dummy
-      ! ---
     end do
   end do
 
   ! bottom 
   do i = 0, m+1
     do j = 0, n+1
-      ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=1, @poro<0.9 (solid))
-      ! if (porosity(i,j,l) < 0.9) then
+      if (bottom_wall == 0) then
+        ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=1, @poro<0.9 (solid))
         u(i,j,1) = 0.
         v(i,j,1) = 0.
         w(i,j,1) = 0.
         w(i,j,0) =-w(i,j,2) ! dummy
         p(i,j,0) = p(i,j,2) ! dummy
-      ! end if
-      ! ---
-      ! --- inlet (w=inlet_velocity, u,v=0., dp/dz=0 at i=1, @poro>=0.9 (fluid))
-      ! if (porosity(i,j,l) >= 0.9) then
-      !   u(i,j,1) =0.
-      !   v(i,j,1) =0.
-      !   w(i,j,1) =inlet_velocity
-      !   u(i,j,0) =u(i,j,1)  ! dummy
-      !   v(i,j,0) =v(i,j,1)  ! dummy
-      !   w(i,j,0) =w(i,j,1)  ! dummy
-      !   p(i,j,0) =p(i,j,2)  ! dummy
-      ! end if
-      ! ---
-      ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at k=1)
-      ! u(i,j,0) =u(i,j,1)  ! dummy
-      ! v(i,j,0) =v(i,j,1)  ! dummy
-      ! w(i,j,0) =w(i,j,1)  ! dummy
-      ! p(i,j,0) =outlet_pressure ! dummy
-      ! ---
+      else if (bottom_wall == 1) then
+        if (porosity(i,j,l) >= 0.9) then
+        ! --- inlet (w=inlet_velocity, u,v=0., dp/dz=0 at i=1, @poro>=0.9 (fluid))
+          u(i,j,1) =0.
+          v(i,j,1) =0.
+          w(i,j,1) =inlet_velocity
+          u(i,j,0) =u(i,j,1)  ! dummy
+          v(i,j,0) =v(i,j,1)  ! dummy
+          w(i,j,0) =w(i,j,1)  ! dummy
+          p(i,j,0) =p(i,j,2)  ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=1, @poro<0.9 (solid))
+          u(i,j,1) = 0.
+          v(i,j,1) = 0.
+          w(i,j,1) = 0.
+          w(i,j,0) =-w(i,j,2) ! dummy
+          p(i,j,0) = p(i,j,2) ! dummy
+        end if
+      else if (bottom_wall == 2) then
+        if (porosity(i,j,1) >= 0.9) then
+        ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at k=1)
+          u(i,j,0) =u(i,j,1)  ! dummy
+          v(i,j,0) =v(i,j,1)  ! dummy
+          w(i,j,0) =w(i,j,1)  ! dummy
+          p(i,j,0) =outlet_pressure ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dz=0. at k=1, @poro<0.9 (solid))
+          u(i,j,1) = 0.
+          v(i,j,1) = 0.
+          w(i,j,1) = 0.
+          w(i,j,0) =-w(i,j,2) ! dummy
+          p(i,j,0) = p(i,j,2) ! dummy 
+        end if
+      end if
     end do
   end do
 
-  ! west 
+! west 
   do j = 0, n+1
     do k = 0, l+1
       ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=1, @poro<0.9 (solid))
-      ! if (porosity(1,j,k) < 0.9) then
+      if (west_wall == 0) then
         u(1,j,k) = 0.
         v(1,j,k) = 0.
         w(1,j,k) = 0.
         u(0,j,k) =-u(2,j,k) ! dummy
         p(0,j,k) = p(2,j,k) ! dummy
-      ! end if
-      ! ---
-      ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at i=1, @poro>=0.9 (fluid))
-      ! if (porosity(1,j,k) >= 0.9) then
-      !   u(1,j,k) =inlet_velocity
-      !   v(1,j,k) =0.
-      !   w(1,j,k) =0.
-      !   u(0,j,k) =u(1,j,k)  ! dummy
-      !   v(0,j,k) =v(1,j,k)  ! dummy
-      !   w(0,j,k) =w(1,j,k)  ! dummy
-      !   p(0,j,k) =p(2,j,k)  ! dummy
-      ! end if
-      ! ---
-      ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at i=1)
-      ! u(0,j,k) =u(1,j,k)  ! dummy
-      ! v(0,j,k) =v(1,j,k)  ! dummy
-      ! w(0,j,k) =w(1,j,k)  ! dummy
-      ! p(0,j,k) =outlet_pressure ! dummy
-      ! ---
+      else if (west_wall == 1) then
+        ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at i=1, @poro>=0.9 (fluid))
+        if (porosity(1,j,k) >= 0.9) then
+          u(1,j,k) =inlet_velocity
+          v(1,j,k) =0.
+          w(1,j,k) =0.
+          u(0,j,k) =u(1,j,k)  ! dummy
+          v(0,j,k) =v(1,j,k)  ! dummy
+          w(0,j,k) =w(1,j,k)  ! dummy
+          p(0,j,k) =p(2,j,k)  ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=1, @poro<0.9 (solid))
+          u(1,j,k) = 0.
+          v(1,j,k) = 0.
+          w(1,j,k) = 0.
+          u(0,j,k) =-u(2,j,k) ! dummy
+          p(0,j,k) = p(2,j,k) ! dummy          
+        end if
+      else if (west_wall == 2) then
+        if (porosity(1,j,k) >= 0.9) then
+        ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at i=1)
+          u(0,j,k) =u(1,j,k)  ! dummy
+          v(0,j,k) =v(1,j,k)  ! dummy
+          w(0,j,k) =w(1,j,k)  ! dummy
+          p(0,j,k) =outlet_pressure ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=1, @poro<0.9 (solid))
+          u(1,j,k) = 0.
+          v(1,j,k) = 0.
+          w(1,j,k) = 0.
+          u(0,j,k) =-u(2,j,k) ! dummy
+          p(0,j,k) = p(2,j,k) ! dummy            
+        end if
+      end if
     end do
   end do
 
   ! east
   do j = 0, n+1
     do k = 0, l+1
-      ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=m, @poro<0.9 (solid))
-      ! if (porosity(m,j,k) < 0.9) then
-        u(m,j,k) = 0.
-        v(m,j,k) = 0.
-        w(m,j,k) = 0.
-        u(m+1,j,k) =-u(m-1,j,k) ! dummy
-        p(m+1,j,k) = p(m-1,j,k) ! dummy
-      ! end if
+      if (east_wall == 0) then
+        ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=m, @poro<0.9 (solid))
+          u(m,j,k) = 0.
+          v(m,j,k) = 0.
+          w(m,j,k) = 0.
+          u(m+1,j,k) =-u(m-1,j,k) ! dummy
+          p(m+1,j,k) = p(m-1,j,k) ! dummy
+        ! ---
+      else if (east_wall == 1) then
+        if (porosity(m,j,k) >= 0.9) then
+        ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at i=m, @poro>=0.9 (fluid))
+          u(m,j,k) =-inlet_velocity
+          v(m,j,k) =0.
+          w(m,j,k) =0.
+          u(m+1,j,k) =u(m,j,k)  ! dummy
+          v(m+1,j,k) =v(m,j,k)  ! dummy
+          w(m+1,j,k) =w(m,j,k)  ! dummy
+          p(m+1,j,k) =p(m-1,j,k)  ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=m, @poro<0.9 (solid))
+          u(m,j,k) = 0.
+          v(m,j,k) = 0.
+          w(m,j,k) = 0.
+          u(m+1,j,k) =-u(m-1,j,k) ! dummy
+          p(m+1,j,k) = p(m-1,j,k) ! dummy
+        end if
       ! ---
-      ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at i=m, @poro>=0.9 (fluid))
-      ! if (porosity(m,j,k) >= 0.9) then
-      !   u(m,j,k) =inlet_velocity
-      !   v(m,j,k) =0.
-      !   w(m,j,k) =0.
-      !   u(m+1,j,k) =u(m,j,k)  ! dummy
-      !   v(m+1,j,k) =v(m,j,k)  ! dummy
-      !   w(m+1,j,k) =w(m,j,k)  ! dummy
-      !   p(m+1,j,k) =p(m-1,j,k)  ! dummy
-      ! end if
-      ! ---
-      ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at i=1)
-      ! u(m+1,j,k) =u(m,j,k)  ! dummy
-      ! v(m+1,j,k) =v(m,j,k)  ! dummy
-      ! w(m+1,j,k) =w(m,j,k)  ! dummy
-      ! p(m+1,j,k) =outlet_pressure ! dummy
-      ! ---
+      else if (east_wall == 2) then
+        if (porosity(m,j,k) >= 0.9) then
+        ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at i=1)
+          u(m+1,j,k) =u(m,j,k)  ! dummy
+          v(m+1,j,k) =v(m,j,k)  ! dummy
+          w(m+1,j,k) =w(m,j,k)  ! dummy
+          p(m+1,j,k) =outlet_pressure ! dummy
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dx=0. at i=m, @poro<0.9 (solid))
+          u(m,j,k) = 0.
+          v(m,j,k) = 0.
+          w(m,j,k) = 0.
+          u(m+1,j,k) =-u(m-1,j,k) ! dummy
+          p(m+1,j,k) = p(m-1,j,k) ! dummy
+        end if
+      end if
     end do
   end do
 
   ! north
   do i = 0, m+1
     do k = 0, l+1
-      ! --- wall (u=0., v=0., w=0., dp/dx=0. at j=n, @poro<0.9 (solid))
-      ! if (porosity(i,n,k) < 0.9) then
+      if (north_wall == 0) then
         u(i,n,k) = 0.
         v(i,n,k) = 0.
         w(i,n,k) = 0.
         u(i,n+1,k) =-u(i,n-1,k) ! dummy
         p(i,n+1,k) = p(i,n-1,k) ! dummy
-      ! end if
-      ! ---
-      ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at j=n, @poro>=0.9 (fluid))
-      ! if (porosity(m,j,k) >= 0.9) then
-      !   u(i,n,k) =inlet_velocity
-      !   v(i,n,k) =0.
-      !   w(i,n,k) =0.
-      !   u(i,n+1,k) =u(i,n,k)  ! dummy
-      !   v(i,n+1,k) =v(i,n,k)  ! dummy
-      !   w(i,n+1,k) =w(i,n,k)  ! dummy
-      !   p(i,n+1,k) =p(i,n-1,k)  ! dummy
-      ! end if
-      ! ---
-      ! --- outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at i=1)
-      ! u(i,n+1,k) =u(i,n,k)  ! dummy
-      ! v(i,n+1,k) =v(i,n,k)  ! dummy
-      ! w(i,n+1,k) =w(i,n,k)  ! dummy
-      ! p(i,n+1,k) =outlet_pressure ! dummy
-      ! ---
+      else if (north_wall == 1) then
+        if (porosity(i,n,k) >= 0.9) then
+          u(i,n,k) =-inlet_velocity
+          v(i,n,k) =0.
+          w(i,n,k) =0.
+          u(i,n+1,k) =u(i,n,k)  ! dummy
+          v(i,n+1,k) =v(i,n,k)  ! dummy
+          w(i,n+1,k) =w(i,n,k)  ! dummy
+          p(i,n+1,k) =p(i,n-1,k)  ! dummy          
+        else
+          u(i,n,k) = 0.
+          v(i,n,k) = 0.
+          w(i,n,k) = 0.
+          u(i,n+1,k) =-u(i,n-1,k) ! dummy
+          p(i,n+1,k) = p(i,n-1,k) ! dummy
+        end if        
+      else if (north_wall == 2) then
+        if (porosity(i,n,k) >= 0.9) then
+          u(i,n+1,k) =u(i,n,k)  ! dummy
+          v(i,n+1,k) =v(i,n,k)  ! dummy
+          w(i,n+1,k) =w(i,n,k)  ! dummy
+          p(i,n+1,k) =outlet_pressure ! dummy         
+        else
+          u(i,n,k) = 0.
+          v(i,n,k) = 0.
+          w(i,n,k) = 0.
+          u(i,n+1,k) =-u(i,n-1,k) ! dummy
+          p(i,n+1,k) = p(i,n-1,k) ! dummy
+        end if                
+      end if
     end do
   end do
 
   ! south 
   do i = 0, m+1
     do k = 0, l+1
+      if (south_wall == 0) then
       ! --- wall (u=0., v=0., w=0., dp/dy=0. at j=1, @poro<0.9 (solid))
-      if (porosity(i,1,k) < 0.9) then
         u(i,1,k) = 0.
         v(i,1,k) = 0.
         w(i,1,k) = 0.
         v(i,0,k) =-v(i,2,k) ! dummy
         p(i,0,k) = p(i,2,k) ! dummy
+      else if (south_wall == 1) then
+        if (porosity(i,1,k) >= 0.9) then
+        ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at j=1, @poro>=0.9 (fluid))
+          u(i,1,k) =inlet_velocity
+          v(i,1,k) =0.
+          w(i,1,k) =0.
+          u(i,0,k) =u(i,1,k)  ! dummy
+          v(i,0,k) =v(i,1,k)  ! dummy
+          w(i,0,k) =w(i,1,k)  ! dummy
+          p(i,0,k) =p(i,2,k)  ! dummy          
+        else
+        ! --- wall (u=0., v=0., w=0., dp/dy=0. at j=1, @poro<0.9 (solid))
+          u(i,1,k) = 0.
+          v(i,1,k) = 0.
+          w(i,1,k) = 0.
+          v(i,0,k) =-v(i,2,k) ! dummy
+          p(i,0,k) = p(i,2,k) ! dummy
+        end if
+      else if (south_wall == 2) then
+        ! --- south outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at j=1)
+          if (porosity(i,1,k) >= 0.9) then
+            u(i,0,k) =u(i,2,k)  ! dummy
+            v(i,0,k) =v(i,2,k)  ! dummy
+            w(i,0,k) =w(i,2,k)  ! dummy
+            p(i,0,k) =outlet_pressure   ! dummy
+          else
+          ! --- wall (u=0., v=0., w=0., dp/dy=0. at j=1, @poro<0.9 (solid))
+            u(i,1,k) = 0.
+            v(i,1,k) = 0.
+            w(i,1,k) = 0.
+            v(i,0,k) =-v(i,2,k) ! dummy
+            p(i,0,k) = p(i,2,k) ! dummy
+          end if
       end if
-      ! ---
-      ! --- inlet (u=inlet_velocity, v,w=0., dp/dz=0 at j=1, @poro>=0.9 (fluid))
-      ! if (porosity(m,j,k) >= 0.9) then
-      !   u(i,1,k) =inlet_velocity
-      !   v(i,1,k) =0.
-      !   w(i,1,k) =0.
-      !   u(i,0,k) =u(i,1,k)  ! dummy
-      !   v(i,0,k) =v(i,1,k)  ! dummy
-      !   w(i,0,k) =w(i,1,k)  ! dummy
-      !   p(i,0,k) =p(i,2,k)  ! dummy
-      ! end if
-      ! ---        
-      ! --- south outlet (du/dx=0., dv/dx=0., dw/dz=0., p=outlet_pressure at j=1)
-      if (porosity(i,1,k) >= 0.9) then
-        u(i,0,k) =u(i,2,k)  ! dummy
-        v(i,0,k) =v(i,2,k)  ! dummy
-        w(i,0,k) =w(i,2,k)  ! dummy
-        p(i,0,k) =outlet_pressure   ! dummy
-      end if
-      ! ---
     end do
   end do
   
@@ -1260,8 +1421,9 @@ end subroutine physical_conditions
 !******************
 
 !******************
-subroutine  grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, height, depth, thickness, time &
-                            , inlet_velocity, AoA, porosity, m, n, l, istep_max, iset)
+subroutine  grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density&
+  , width, height, depth, thickness, time, inlet_velocity, AoA&
+  , porosity, m, n, l, istep_max, iset)
   use global
   implicit none
   real,intent(inout)::dx, dy, dz, dt, AoA, thickness
@@ -1295,22 +1457,22 @@ subroutine  grid_conditions (xp, yp, zp, dx, dy, dz, dt, xnue, density, width, h
   read(11,nml=directory_control)
   close(11)
   !-----------------
-  
+
   ! read pixel data
-  open(52,file=csv_file, form='formatted')
+  open(51,file=csv_file, form='formatted')
   
-  read(52,*) m,n,l
+  read(51,*) m,n,l
 
   do k = 1, l
     do j = 1, n
       do i = 1, m
-        read(52, *) x, y, z, poro_val
+        read(51, *) x, y, z, poro_val
         porosity(x, y, z) = max(poro_val, threshold)
       end do
     end do
   end do
   
-  close(52) 
+  close(51) 
   
   dx = width / real(m-1)
   dy = height / real(n-1)
@@ -1415,9 +1577,35 @@ subroutine  initial_conditions (p, u, v, w, xp, yp, zp, width, height, depth  &
   do j = 1, m
   do i = 1, n
   do k = 1, l
-    u(i,j,k) = 0.
-    v(i,j,k) = 0.
-    w(i,j,k) = inlet_velocity
+    if (top_wall == 1 .and. bottom_wall /= 1) then
+      u(i,j,k) = 0.
+      v(i,j,k) = 0.
+      w(i,j,k) = -inlet_velocity
+    else if (top_wall /= 1 .and. bottom_wall == 1) then
+      u(i,j,k) = 0.
+      v(i,j,k) = 0.
+      w(i,j,k) = inlet_velocity
+    else if (west_wall == 1 .and. east_wall /= 1) then
+      u(i,j,k) = inlet_velocity
+      v(i,j,k) = 0.
+      w(i,j,k) = 0.      
+    else if (west_wall /= 1 .and. east_wall == 1) then
+      u(i,j,k) = -inlet_velocity
+      v(i,j,k) = 0.
+      w(i,j,k) = 0.      
+    else if (south_wall == 1 .and. north_wall /=1) then
+      u(i,j,k) = 0.
+      v(i,j,k) = inlet_velocity
+      w(i,j,k) = 0.      
+    else if (south_wall /= 1 .and. north_wall ==1) then
+      u(i,j,k) = 0.
+      v(i,j,k) = -inlet_velocity
+      w(i,j,k) = 0.
+    else
+      u(i,j,k) = 0.
+      v(i,j,k) = 0.
+      w(i,j,k) = 0.            
+    end if
     p(i,j,k) = outlet_pressure
   end do
   end do
