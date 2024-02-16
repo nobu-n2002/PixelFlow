@@ -130,7 +130,7 @@ program main
    implicit none
    integer,parameter:: md = 300, nd = 300, ld = 300
    real,intent(in):: dx, dy, dz, dt
-   real,intent(in):: xnue, density, height, thickness
+   real,intent(in):: xnue, xlamda, density, height, thickness
    real,intent(inout),dimension(0:md,0:nd,0:ld):: u, v, w, p, u_old, v_old, w_old 
    real,intent(in),dimension(0:md,0:nd,0:ld):: porosity
    real,intent(in),dimension(0:nd):: yp
@@ -145,7 +145,6 @@ program main
    real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
    integer:: i, j, k
    real:: fc
-   real:: xlamda
   
   !-----------------
   !  divergence term  div(u)
