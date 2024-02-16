@@ -139,7 +139,7 @@ program main
   
   !******************
   subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
-    xnue, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
+    xnue, xlamda, xlamda, density, height, thickness, yp, dx, dy, dz, dt, m, n, l)
    implicit none
    integer,parameter:: md = 300, nd = 300, ld = 300
    real,intent(in):: dx, dy, dz, dt
@@ -158,7 +158,6 @@ program main
    real,dimension(0:md,0:nd,0:ld):: ap, ae, aw, an, as, at, ab, bb, div
    integer:: i, j, k
    real:: fc
-   real:: xlamda
   
   !-----------------
   !  divergence term  div(u)
@@ -1590,7 +1589,7 @@ program main
   do k=1,l
    div(i,j,k)= (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
               +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-              +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+              +(w(i,j,k+1)-w(i,j,k-1))/(zp(k+1)-zp(k-1))
   end do
   end do
   end do
@@ -1760,7 +1759,7 @@ program main
   do k=1,l
   div(i,j,k)= (u(i+1,j,k)-u(i-1,j,k))/(xp(i+1)-xp(i-1)) &
             +(v(i,j+1,k)-v(i,j-1,k))/(yp(j+1)-yp(j-1)) &
-            +(v(i,j,k+1)-v(i,j,k-1))/(zp(k+1)-zp(k-1))
+            +(w(i,j,k+1)-w(i,j,k-1))/(zp(k+1)-zp(k-1))
   end do
   end do
   end do
