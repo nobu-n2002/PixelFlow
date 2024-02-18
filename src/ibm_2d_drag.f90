@@ -281,7 +281,7 @@ end subroutine solve_p
 ! Written only for GPU machine
 ! No efficiency ensured on CPU machine
 subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n)
-  use gloabl
+  use global
   implicit none
   real,intent(inout),dimension(0:md,0:nd)::	p
   real,intent(in),dimension(0:md,0:nd)::		ap, ae, aw, an, as, bb
