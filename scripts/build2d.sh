@@ -8,12 +8,13 @@ BIN_DIR=bin
 EXE=ibm2
 
 mkdir -p bin
+cd bin
 
-rm -f ${BIN_DIR}/*.o ${BIN_DIR}/*.mod ${BIN_DIR}/*.exe ${BIN_DIR}/*.out ${BIN_DIR}/ibm2
+rm -f *.o *.mod *.exe *.out ibm2
 
 echo ${FC} ${FC_FLAG} ${BIN_DIR}/${EXE} ${SRC_DIR}/${SRC}
 
-if ${FC} ${FC_FLAG} ${BIN_DIR}/${EXE} ${SRC_DIR}/${SRC}; then
+if ${FC} ${FC_FLAG} ${EXE} ../${SRC_DIR}/${SRC}; then
     echo "Build complete. Executable: bin/ibm2"
 else
     echo "Error: Build failed."
