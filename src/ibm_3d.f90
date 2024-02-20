@@ -563,15 +563,15 @@ program main
   real,dimension(0:md,0:nd,0:ld):: p_old
   integer::i, j, k, iter, iter_max, ii
 
-  !$acc data copy(p_old, p) &
-  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) 
-  
   ! ----------------
   !   SOR algorithm
   ! ----------------
 
   iter_max = 300 ! SOR max interation steps
   relux_factor=1.7 ! SOR reluxation factor
+
+  !$acc data copy(p_old, p) &
+  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) 
 
   do iter = 1, iter_max
   ! write(*,*)'CHECK iteration no.'
