@@ -345,9 +345,15 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
     do k = 1, l
       do j = 1, n
         do i = 1, m
-          u(i,j,k) = u(i,j,k) - dt*xnue*u_old(i,j,k)/(thickness*dx)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-          v(i,j,k) = v(i,j,k) - dt*xnue*v_old(i,j,k)/(thickness*dy)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
-          w(i,j,k) = w(i,j,k) - dt*xnue*w_old(i,j,k)/(thickness*dz)**2*alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+          u(i,j,k) = u(i,j,k) &
+                     - dt*xnue*u_old(i,j,k)/(thickness*dx)**2 &
+                       *alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+          v(i,j,k) = v(i,j,k) &
+                     - dt*xnue*v_old(i,j,k)/(thickness*dy)**2 &
+                       *alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
+          w(i,j,k) = w(i,j,k) &
+                     - dt*xnue*w_old(i,j,k)/(thickness*dz)**2 &
+                       *alpha*porosity(i,j,k)*(1.-porosity(i,j,k))*(1.-porosity(i,j,k))
         end do
       end do
     end do
