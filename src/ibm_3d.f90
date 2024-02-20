@@ -374,8 +374,8 @@ program main
   call boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
 
   ! call solve_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
-  call solve_matrix_vec_omp (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
-  ! call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
+  ! call solve_matrix_vec_omp (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
+  call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, m, n, l)
   ! ----------------
   ! ----------------
   return
@@ -572,7 +572,7 @@ program main
 
   !$acc data copy(p) &
   !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) &
-  !$acc data create(p_old)
+  !$acc & create(p_old)
 
   do iter = 1, iter_max
   ! write(*,*)'CHECK iteration no.'
