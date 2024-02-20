@@ -454,9 +454,9 @@ program main
   !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
   if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i - 1
   p(i,j,k) = (bb(i,j,k) &
-            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
+            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
+            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
             / ap(i,j,k)*relux_factor &
             + p_old(i,j,k)*(1.-relux_factor)
   error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
@@ -503,9 +503,9 @@ program main
     !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
     if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i + 1
     p(i,j,k) = (bb(i,j,k) &
-              - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-              - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-              - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+              - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
+              - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
+              - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
               / ap(i,j,k)*relux_factor &
               + p_old(i,j,k)*(1.-relux_factor)
     error = max(error, abs(p(i,j,k)-p_old(i,j,k)))
@@ -626,9 +626,9 @@ program main
   !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
   if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i - 1
   p(i,j,k) = (bb(i,j,k) &
-            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
+            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
+            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
             / ap(i,j,k)*relux_factor &
             + p_old(i,j,k)*(1.-relux_factor)
   
@@ -684,9 +684,9 @@ program main
     !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
     if(mod(m,2)==0 .and. (mod(j,2)==0 .or. mod(k,2)==0)) i = i + 1
     p(i,j,k) = (bb(i,j,k) &
-              - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-              - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-              - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+              - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
+              - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
+              - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
               / ap(i,j,k)*relux_factor &
               + p_old(i,j,k)*(1.-relux_factor)
     
@@ -780,9 +780,9 @@ program main
   do j = 1, n
   do k = 1, l
   p(i,j,k) = (bb(i,j,k) &
-            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p(i-1,j,k)  &
-            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p(i,j-1,k)  &
-            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p(i,j,k-1)) &
+            - ae(i,j,k)*p_old(i+1,j,k)-aw(i,j,k)*p_old(i-1,j,k)  &
+            - an(i,j,k)*p_old(i,j+1,k)-as(i,j,k)*p_old(i,j-1,k)  &
+            - at(i,j,k)*p_old(i,j,k+1)-ab(i,j,k)*p_old(i,j,k-1)) &
             / ap(i,j,k)*relux_factor &
             + p_old(i,j,k)*(1.-relux_factor)
   
