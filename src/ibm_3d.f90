@@ -570,8 +570,9 @@ program main
   iter_max = 300 ! SOR max interation steps
   relux_factor=1.7 ! SOR reluxation factor
 
-  !$acc data copy(p_old, p) &
-  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) 
+  !$acc data copy(p) &
+  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) &
+  !$acc data create(p_old)
 
   do iter = 1, iter_max
   ! write(*,*)'CHECK iteration no.'
