@@ -7,66 +7,52 @@ program main
   !$ use omp_lib
   use global
   implicit none
-  real:: dx, dy, dt
-  real:: xnue, xlamda, density, width, height, time
-  real:: inlet_velocity, outlet_pressure, AoA, thickness
-  real:: radius
-  real,dimension(0:md,0:nd):: u, v, p, u_old, v_old, p_old
+  integer:: istep
+  real,dimension(0:md,0:nd):: u, v, p, u_old, v_old
   real,dimension(0:md,0:nd):: porosity
+  real:: dx, dy, dt
   real,dimension(0:md):: xp
   real,dimension(0:nd):: yp
-  integer:: m, n, istep, istep_max, iset, istep_out
+  integer:: m, n
   integer:: i, j
+  !--- namelist valiables  
+  real:: xnue, xlambda, density, width, height, depth, time
+  real:: inlet_velocity, outlet_pressure, AoA
+  integer:: istep_max, istep_out
+  real:: thickness, threshold, radius, center_x, center_y, center_z
+  logical:: nonslip
   character(len=50) :: output_folder
   character(len=50) :: csv_file
+  integer:: iter_max
+  real:: relux_factor
   ! ----------------
-  ! read input data by using namelist
-  ! by Nobuto Nakamichi 4/7/2023
-  namelist /file_control/istep_out
-  namelist /grid_control/istep_max
-  namelist /directory_control/output_folder, csv_file
-  open(11,file="config/controlDict.txt",status="old",action="read")
-  read(11,nml=file_control)
-  read(11,nml=grid_control)
-  read(11,nml=directory_control)
-  close(11)
-  ! ----------------
-  ! write(*,*)'porosity setting:0 or calculation start:1 ?'
-  ! read(*,*) iset
-  ! make output directory
+
+  call get_now_time()
+
+  call read_settings(&
+  xnue, xlambda, density, width, height, depth, time,&
+  inlet_velocity, outlet_pressure, AoA,&
+  istep_max, istep_out,&
+  thickness, threshold, radius, center_x, center_y, center_z,&
+  nonslip,&
+  output_folder,csv_file,&
+  iter_max, relux_factor)
 
   call system('mkdir -p '//trim(output_folder))
   call system('mkdir -p etc')
   ! -----------------
 
-  iset=1
-
-  !-----------------
-  ! porosity setting
-
-  if (iset==0)then
-  m=0         ! setup switch for grid conditions
-  density=0.  ! setup switch for physical conditions
-
-  call  physical_conditions (xnue, xlamda, density, width, height, time &
-                        , inlet_velocity, outlet_pressure, AoA, m, n, radius)
-  call  grid_conditions (xp, yp, dx, dy, dt, xnue, xlamda, density, width, height, thickness, time &
-                        , inlet_velocity, AoA, porosity, m, n, istep_max, iset)
-  ! call  output_grid_list (xp, yp, m, n, angle_of_attack)
-  stop
-  end if
+  call grid_conditions (&
+  xp, yp, dx, dy, dt, xnue, xlambda, density, width, height, depth,&
+  thickness, threshold, radius,&
+  center_x, center_y, time,&
+  inlet_velocity, AoA, porosity, m, n, istep_max,&
+  csv_file)
 
   ! ----------------
   ! calculation start  (if iest=!0)
   ! ----------------
-  ! set up condistions
-  m=0         ! setup switch for grid conditions
-  density=0.  ! setup switch for physical conditions
 
-  call  physical_conditions (xnue, xlamda, density, width, height, time &
-                        , inlet_velocity, outlet_pressure, AoA, m, n, radius)
-  call  grid_conditions (xp, yp, dx, dy, dt, xnue, xlamda, density, width, height,&
-              thickness, time, inlet_velocity, AoA, porosity, m, n, istep_max, iset)
   call  output_grid (xp, yp, m, n)
 
   ! write(*,*) "check", (porosity(i,10), i=1,m)
@@ -76,7 +62,7 @@ program main
 
   ! ----------------
 
-  write(*,*) 'istep_max= ', istep_max,'   istep_out= ', istep_out
+  write(*,*) '# istep_max= ', istep_max,'   istep_out= ', istep_out
 
   call  initial_conditions (p, u, v, xp, yp, width, height &
                         , inlet_velocity, outlet_pressure, AoA, m, n)
@@ -88,111 +74,132 @@ program main
 
   ! ----------------
   ! MAC algorithm start
+  call get_now_time()
+  write(*,*) '# --- MAC algorithm start'
 
   do istep = 1, istep_max
 
   time = istep* dt
+
+  !$omp parallel private(i, j) &
+  !$omp & shared(m, n) &
+  !$omp & shared(u_old, v_old, u, v) &
+  !$omp & default(none)
+  !$omp do
   do i = 0, m+1
     do j = 0, n+1
-      u_old(i,j) = u(i,j)
-      v_old(i,j) = v(i,j)
+    u_old(i,j) = u(i,j)
+    v_old(i,j) = v(i,j)
     end do
   end do
+  !$omp end do
+  !$omp end parallel
   write(*,*)'--- time_steps= ',istep, ' --  time = ',time
 
-  call  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, height, thickness, yp, dx, dy, dt, m, n)
+  call  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlambda, density, height, thickness, &
+  yp, dx, dy, dt, m, n, nonslip, iter_max, relux_factor)
 
-  call  solve_u (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, dx, dy, dt, m, n)
-
-  call  solve_v (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, dx, dy, dt, m, n)
+  !-- solve u, v (fix u, v)
+  !$omp parallel private(i, j) &
+  !$omp & shared(m, n, dt, dx, dy, density) &
+  !$omp & shared(p, u, v) &
+  !$omp & default(none)
+  !$omp do
+  do j = 1, n
+    do i = 1, m
+      u(i,j) = u(i,j) - dt/density*(p(i+1,j)-p(i-1,j))/dx*0.5
+      v(i,j) = v(i,j) - dt/density*(p(i,j+1)-p(i,j-1))/dy*0.5
+    end do
+  end do
+  !$omp end do
+  !$omp end parallel
 
   call  boundary(p, u, v, xp, yp, width, height    &
-                      , inlet_velocity, outlet_pressure, AoA, porosity, m, n)
+                    , inlet_velocity, outlet_pressure, AoA, porosity, m, n)
 
   call output_force_log (p, u, v, dx, dy, porosity, m, n, xnue, density, thickness, radius, inlet_velocity)
 
   if(mod(istep,istep_out)==0) then
-    call output_paraview_temp (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, density, thickness, radius, inlet_velocity, istep)
-    call output_force_post (p, u, v, dx, dy, porosity, m, n, xnue, density, thickness, radius, inlet_velocity, istep)
+    call output_paraview_temp (p, u, v, porosity, xp, yp, m, n, inlet_velocity, istep, output_folder)
   end if
   end do
+  call get_now_time()
   ! MAC algorithm end
   ! ----------------
-
-  ! print conditions (recall)
-  call  physical_conditions (xnue, xlamda, density, width, height, time &
-                        , inlet_velocity, outlet_pressure, AoA, m, n, radius)
-  call  grid_conditions (xp, yp, dx, dy, dt, xnue, xlamda, density, width, height, thickness, time &
-  , inlet_velocity, AoA, porosity, m, n, istep_max, iset)
 
   ! print solutions
   call  output_solution_post (p, u, v, xp, yp, porosity, m, n)
   call  output_divergent (p, u, v, porosity, dx, dy, m, n)
-  call  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, density, thickness, radius, inlet_velocity)
+  call  output_paraview (p, u, v, porosity, xp, yp, m, n, inlet_velocity, output_folder)
   write(*,*) 'program finished'
-  
+  call get_now_time()
+  return
 end program main
 !******************
-  
+
 !  solve variables
-  
 !******************
-subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, height,thickness, yp, dx, dy, dt, m, n)
+subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlambda, density, height, thickness, &
+  yp, dx, dy, dt, m, n, nonslip, iter_max, relux_factor)
   use global
   implicit none
   real,intent(in):: dx, dy, dt
-  real,intent(in):: xnue, xlamda, density, height, thickness
+  real,intent(in):: xnue, xlambda, density, height, thickness
   real,intent(inout),dimension(0:md,0:nd):: u, v, p, u_old, v_old
   real,intent(in),dimension(0:md,0:nd):: porosity
-  real,intent(in),dimension(0:nd):: yp
+  real,intent(in),dimension(0:nd) :: yp
   integer,intent(in):: m, n
-
+  logical,intent(in):: nonslip
+  integer,intent(in):: iter_max
+  real,intent(in):: relux_factor
   !-----------------
-  ! local variables
-  real, parameter:: small = 1.e-6, big = 1.e6, zero = 0.
-  real, parameter::alpha = 32.0
+  ! local variables 
+  real, parameter :: small = 1.e-6
+  real, parameter :: alpha = 32.0
 
-  real,dimension(0:md,0:nd):: ap, ae, aw, an, as, bb, div
-  integer:: i, j
-  real:: fc
+  real,dimension(0:md,0:nd) :: ap, ae, aw, an, as, bb, div
+  integer :: i, j
 
+  !$omp parallel private(i, j) &
+  !$omp & shared(dx, dy, dt, xnue, density, height, thickness, m, n) &
+  !$omp & shared(p, u, v, u_old, v_old, porosity, yp) &
+  !$omp & shared(xlambda, nonslip) &
+  !$omp & shared(ap, ae, aw, an, as, bb, div) &
+  !$omp & default(none)
   !-----------------
   !  divergence term  div(u)
   !-----------------
-  ! ----------------
-  ! read input data by using namelist
-  ! by Nobuto Nakamichi 27/7/2023
-  logical::nonslip
-  namelist /calculation_method/nonslip
-  open(11,file="config/controlDict.txt",status="old",action="read")
-  read(11,nml=calculation_method)
-  close(11)
-  ! ----------------
+  !$omp do
   do i = 1, m
     do j = 1, n
         div(i,j)= (u_old(i+1,j)-u_old(i-1,j))/dx*.5 &
                 + (v_old(i,j+1)-v_old(i,j-1))/dx*.5
     end do
   end do
-
+  !$omp end do
+  
+  !$omp do
   do j = 1, n
     div(0,j)  = 0.  ! inlet
     div(m+1,j)= 0.  ! outlet
   end do
+  !$omp end do
 
+  !--- periodic condition
+  !$omp do
   do i = 1, m
-    div(i,0)  = div(i,n)  ! periodic condition
+    div(i,0)  = div(i,n) 
     div(i,n+1)= div(i,1)
   end do
-
+  !$omp end do
   ! ----------------
-  fc=0.
 
-  do i = 1, m
-  do j = 1, n
   ! ----------------
   !   velocity u
   ! ----------------
+  !$omp do
+  do i = 1, m
+  do j = 1, n
   ! --- convection_x  2nd central scheme
   u(i,j)=u_old(i,j)-dt*(u_old(i,j)*(u_old(i+1,j)-u_old(i-1,j))/dx/2.)
 
@@ -203,22 +210,28 @@ subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, hei
   ! --- diffusion_y
   u(i,j)=u(i,j) +dt*xnue*(u_old(i,j+1)-2.*u_old(i,j)+u_old(i,j-1))/dy/dy
   ! --- divergence term
-  u(i,j)=u(i,j) +dt*(xnue + xlamda)*(div(i+1,j)-div(i-1,j))/dx*.5
+  u(i,j)=u(i,j) +dt*(xnue + xlambda)*(div(i+1,j)-div(i-1,j))/dx*.5
   ! --- additional terms by porosity profile   ! canceled for non-slip condition
   u(i,j)=u(i,j)							&
       +dt*( ( (u_old(i+1,j)-u_old(i-1,j))/dx*.5+(u_old(i+1,j)-u_old(i-1,j))/dx*.5) &
               *xnue*(porosity(i+1,j)-porosity(i-1,j))/dx*.5                        &
             +( (u_old(i,j+1)-u_old(i,j-1))/dy*.5+(v_old(i+1,j)-v_old(i-1,j))/dx*.5) &
               *xnue*(porosity(i,j+1)-porosity(i,j-1))/dy*.5                        &
-            + div(i,j)*(porosity(i+1,j)-porosity(i-1,j))/dx*0.5*xlamda             &
+            + div(i,j)*(porosity(i+1,j)-porosity(i-1,j))/dx*0.5*xlambda             &
             )/porosity(i,j)
   ! --- force on wall
   if (nonslip) then
-  u(i,j)=u(i,j)- dt*xnue*u_old(i,j)/(thickness*dx)**2*alpha*porosity(i,j)*(1.-porosity(i,j))*(1.-porosity(i,j))
+    u(i,j)=u(i,j)- dt*xnue*u_old(i,j)/(thickness*dx)**2*alpha*porosity(i,j)*(1.-porosity(i,j))*(1.-porosity(i,j))
   end if
+  end do
+  end do
+  !$omp end do
   ! ----------------
   !   velocity v
   ! ----------------
+  !$omp do
+  do i = 1, m
+  do j = 1, n
   ! --- convection_x  2nd central scheme
   v(i,j)=v_old(i,j)-dt*(u_old(i,j)*(v_old(i+1,j)-v_old(i-1,j))/dx/2.) 
 
@@ -230,25 +243,26 @@ subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, hei
   ! --- diffusion_y
   v(i,j)=v(i,j) +dt*xnue*(v_old(i,j+1)-2.*v_old(i,j)+v_old(i,j-1))/dy/dy
   ! --- divergence term   ! L+(2/3)N = (1/3)N;(2/3) or 0(1/3)
-  v(i,j)=v(i,j) +dt*(xnue + xlamda)*(div(i,j+1)-div(i,j-1))/dy*.5
+  v(i,j)=v(i,j) +dt*(xnue + xlambda)*(div(i,j+1)-div(i,j-1))/dy*.5
   ! --- additional terms by porosity profile   ! canceled for non-slip condition    ! L+(2/3)N = (1/3)N;(-1/3) or 0:(-2/3)N
   v(i,j)=v(i,j)							&
       +dt*( ( (v_old(i+1,j)-v_old(i-1,j))/dx*.5+(u_old(i,j+1)-u_old(i,j-1))/dy*.5) &
               *xnue*(porosity(i+1,j)-porosity(i-1,j))/dx*.5                        &
             +( (v_old(i,j+1)-v_old(i,j-1))/dy*.5+(v_old(i,j+1)-v_old(i,j-1))/dy*.5) &
               *xnue*(porosity(i,j+1)-porosity(i,j-1))/dy*.5                        &
-            + div(i,j)*(porosity(i,j+1)-porosity(i,j-1))/dy*0.5*xlamda       &
+            + div(i,j)*(porosity(i,j+1)-porosity(i,j-1))/dy*0.5*xlambda       &
             )/porosity(i,j)
   ! --- force on wall
   if (nonslip) then
-  v(i,j)=v(i,j)- dt*xnue*v_old(i,j)/(thickness*dx)**2*alpha*porosity(i,j)*(1.-porosity(i,j))*(1.-porosity(i,j))
+    v(i,j)=v(i,j)- dt*xnue*v_old(i,j)/(thickness*dx)**2*alpha*porosity(i,j)*(1.-porosity(i,j))*(1.-porosity(i,j))
   end if
   end do
   end do
+  !$omp end do
 
   ! ----------------
   ! matrix solution  !  formulation of porous media
-
+  !$omp do
   do i = 1, m
   do j = 1, n
   ae(i,j)= dt*max(small,(porosity(i+1,j)+porosity(i,j))*0.5)/dx/dx
@@ -264,157 +278,36 @@ subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, hei
 
   end do
   end do
+  !$omp end do
+  !$omp end parallel
 
   call boundrary_matrix (p, ap, ae, aw, an, as, bb, m, n, height, yp)
 
   ! call solve_matrix (p, ap, ae, aw, an, as, bb, m, n)
-  call solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n)
+  call solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
   !call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n)
-  ! ----------------
   ! ----------------
   return
 end subroutine solve_p
 !******************
   
 !******************
-! OpenACC Parallelized
-! Written only for GPU machine
-! No efficiency ensured on CPU machine
-subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n)
-  use global
-  implicit none
-  real,intent(inout),dimension(0:md,0:nd)::	p
-  real,intent(in),dimension(0:md,0:nd)::		ap, ae, aw, an, as, bb
-  integer,intent(in)::	m, n
-
-  ! local variables
-  real::		relux_factor
-  real,dimension(0:md, 0:nd)::	p_old
-  integer::	i, j, iter, iter_max, k
-
-  ! ----------------
-  !   SOR algorithm
-
-  iter_max = min(100, max(m, n))		! SOR max interation steps
-  relux_factor = 1.7 	! SOR reluxation factor
-
-  !$acc data copy(p_old, p) &
-  !$acc    & copyin(ap, ae, aw, an, as, bb, relux_factor)
-
-  do iter = 1, iter_max
-  ! write(*,*)'CHECK iteration no. ',iter, ' / iter_max', iter_max
-
-  ! default periodic condition in y-direction
-  !$acc kernels
-  !$acc loop independent
-  do i = 1, m
-    p(i, 0) = p(i, n)
-    p(i, n+1) = p(i, 1)
-  end do
-  !$acc end kernels
-
-  !$acc kernels
-  !$acc loop independent
-  do i = 0, m+1
-  !$acc loop independent
-    do j = 0, n+1
-      p_old(i, j) = p(i, j)
-    end do
-  end do
-  !$acc end kernels
-
-  !-- EVEN SPACE process
-  !$acc kernels
-  !$acc loop independent
-  do k = 2, m*n, 2    ! even space
-    j = (k - 1) / m + 1
-    i = k - (j - 1) * m
-
-    !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
-    if(mod(m,2)==0 .and. mod(j,2)==0) i = i - 1
-
-    p(i, j) = ( bb(i, j)					                                      &
-                - ae(i, j) * p_old(i+1, j) - aw(i, j) * p_old(i-1, j)    &
-                - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
-              / ap(i, j) * relux_factor                                 &
-              + p_old(i, j) * (1. - relux_factor)
-  end do
-  !$acc end kernels
-
-  ! default periodic condition in y-direction
-  !$acc kernels
-  !$acc loop independent
-  do i = 1, m
-    p(i, 0)  = p(i, n)
-    p(i, n+1) = p(i, 1)
-  end do
-  !$acc end kernels
-
-  !$acc kernels
-  !$acc loop independent
-  do i = 0, m+1
-  !$acc loop independent
-    do j = 0, n+1
-      p_old(i, j) = p(i, j)
-    end do
-  end do
-  !$acc end kernels
-
-  !-- ODD SPACE process
-  !$acc kernels
-  !$acc loop independent
-  do k = 1, m*n, 2    ! odd space
-    j = (k - 1) / m + 1
-    i = k - (j - 1) * m
-
-    !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
-    if(mod(m,2)==0 .and. mod(j,2)==0) i = i + 1
-
-    p(i, j) = ( bb(i, j)					                                      &
-                - ae(i, j) * p_old(i+1, j) - aw(i, j) * p_old(i-1, j)    &
-                - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
-              / ap(i, j) * relux_factor                                 &
-              + p_old(i, j) * (1. - relux_factor)
-  end do
-  !$acc end kernels
-
-  !if(mod(iter,10)==0) write(*,*)'CHECK iteration no.', iter,'  -- error=', error
-  end do
-
-  ! default periodic condition in y-direction
-  !$acc kernels
-  !$acc loop independent
-  do i = 1, m
-  p(i, 0)   = p(i, n)
-  p(i, n+1) = p(i, 1)
-  end do
-  !$acc end kernels
-
-  !$acc end data
-
-  !  write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
-  ! write(*,*)' check P(10,10) in solve_matrix ', p(10,10)
-  ! ----------------
-
-  return
-end subroutine solve_matrix_vec_oacc
-!******************
-  
-!******************
 ! OpenMP Parallelized
 ! Written only for CPU machine
 ! No efficiency ensured on GPU machine
-subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n)
+subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
   use global  
   implicit none
   real,intent(inout),dimension(0:md,0:nd)::p
   real,intent(in),dimension(0:md,0:nd)::ap, ae, aw, an, as, bb
   integer,intent(in)::m, n
+  real,intent(in)::relux_factor
+  integer,intent(in)::iter_max
 
   ! local variables
-  real::	relux_factor, error
+  real::error
   real,dimension(0:md, 0:nd)::p_old
-  integer::	i, j, iter, iter_max, k
+  integer::i, j, iter, k
 
   !$omp parallel private(iter, i, j, k) &
   !$omp & shared(iter_max, relux_factor, m, n) &
@@ -425,8 +318,6 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n)
   !   SOR algorithm
   ! ----------------
   !$omp single
-  iter_max = min(300, max(m, n)) ! SOR max interation steps
-  relux_factor = 1.7 ! SOR reluxation factor
   error = 0.0
   !$omp end single
 
@@ -464,7 +355,7 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n)
               + p_old(i, j) * (1. - relux_factor)
       error = max(error, abs(p(i,j)-p_old(i,j)))
     end do
-  !$omp end do
+    !$omp end do
 
     ! default periodic condition in y-direction
     !$omp do
@@ -500,7 +391,6 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n)
     end do
   !$omp end do
 
-    !if(mod(iter,10)==0) write(*,*)'CHECK iteration no.', iter,'  -- error=', error
   end do
 
   ! default periodic condition in y-direction
@@ -520,191 +410,245 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n)
   return
 end subroutine solve_matrix_vec_omp
 !******************
-  
-!******************
-subroutine  solve_matrix (p, ap, ae, aw, an, as, bb, m, n)
-  use global
+
+  !******************
+  ! OpenACC Parallelized
+  ! Written only for GPU machine
+  ! No efficiency ensured on CPU machine
+subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
+  use global  
   implicit none
-  real,intent(inout),dimension(0:md,0:nd):: p
-  real,intent(in),dimension(0:md,0:nd):: ap, ae, aw, an, as, bb
-  integer,intent(in):: m, n
+  real,intent(inout),dimension(0:md,0:nd)::p
+  real,intent(in),dimension(0:md,0:nd)::ap, ae, aw, an, as, bb
+  integer,intent(in)::m, n
+  real,intent(in)::relux_factor
+  integer,intent(in)::iter_max
 
   ! local variables
-  real:: relux_factor, error
+  real::error
   real,dimension(0:md, 0:nd)::p_old
-  integer::i, j, iter, iter_max
+  integer::i, j, iter, k
 
   ! ----------------
   !   SOR algorithm
   ! ----------------
-  ! iter_max = min(100,max(m,n)) ! SOR max interation steps
-  iter_max = 50
-  relux_factor=1.7 ! SOR reluxation factor
+
+  !$acc data copy(p) &
+  !$acc & copyin(ap, ae, aw, an, as, bb, relux_factor) &
+  !$acc & create(p_old, error)
 
   do iter = 1, iter_max
-  ! write(*,*)'CHECK iteration no.'
-  ! error=0.
+    ! write(*,*)'CHECK iteration no. ',iter, ' / iter_max', iter_max
+
+    ! default periodic condition in y-direction
+    !$acc kernels
+    !$acc loop independent
+    do i = 1, m
+      p(i, 0) = p(i, n)
+      p(i, n+1) = p(i, 1)
+    end do
+    !$acc end kernels
+
+    !$acc kernels
+    !$acc loop independent
+    do i = 0, m+1
+    !$acc loop independent
+      do j = 0, n+1
+        p_old(i, j) = p(i, j)
+      end do
+    end do
+    !$acc end kernels
+
+    !-- EVEN SPACE process
+    !$acc kernels
+    !$acc loop independent
+    do k = 2, m*n, 2    ! even space
+      j = (k - 1) / m + 1
+      i = k - (j - 1) * m
+
+      !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
+      if(mod(m,2)==0 .and. mod(j,2)==0) i = i - 1
+
+      p(i, j) = ( bb(i, j)					                                      &
+                - ae(i, j) * p_old(i+1, j) - aw(i, j) * p_old(i-1, j)    &
+                - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
+                / ap(i, j) * relux_factor                                 &
+              + p_old(i, j) * (1. - relux_factor)
+    end do
+    !$acc end kernels
+
+    ! default periodic condition in y-direction
+    !$acc kernels
+    !$acc loop independent
+    do i = 1, m
+      p(i, 0)  = p(i, n)
+      p(i, n+1) = p(i, 1)
+    end do
+    !$acc end kernels
+
+    !$acc kernels
+    !$acc loop independent
+    do i = 0, m+1
+    !$acc loop independent
+      do j = 0, n+1
+        p_old(i, j) = p(i, j)
+      end do
+    end do
+    !$acc end kernels
+
+    !-- ODD SPACE process
+    !$acc kernels
+    !$acc loop independent
+    do k = 1, m*n, 2    ! odd space
+      j = (k - 1) / m + 1
+      i = k - (j - 1) * m
+
+      !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
+      if(mod(m,2)==0 .and. mod(j,2)==0) i = i + 1
+
+      p(i, j) = ( bb(i, j)					                                      &
+                - ae(i, j) * p_old(i+1, j) - aw(i, j) * p_old(i-1, j)    &
+                - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
+                / ap(i, j) * relux_factor                                 &
+              + p_old(i, j) * (1. - relux_factor)
+    end do
+    !$acc end kernels
+
+    !$acc kernels
+    !$acc loop independent reduction(max:error)
+    do i = 1, m
+    !$acc loop independent reduction(max:error)
+      do j = 1, n
+        error = max(error, abs(p(i,j)-p_old(i,j)))
+      end do 
+    end do
+  end do
 
   ! default periodic condition in y-direction
+  !$acc kernels
+  !$acc loop independent
   do i = 1, m
-  p(i,0)  =p(i,n)
-  p(i,n+1)=p(i,1)
+    p(i, 0)   = p(i, n)
+    p(i, n+1) = p(i, 1)
   end do
+  !$acc end kernels
 
-  ! do i = 0, m+1
-  ! do j = 0, n+1
-  !  p_old(i,j) = p(i,j)
-  ! end do
-  ! end do
+  !$acc end data
 
-  do i = 1, m
-  do j = 1, n
-  p(i,j) = (  bb(i,j)					&
-          - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
-          - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
-          /ap(i,j)    * relux_factor			&
-        + p_old(i,j) * (1.-relux_factor)
-  end do
-  end do
-
-  end do
-
-  ! ----------------
+   write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
 
   return
+end subroutine solve_matrix_vec_oacc
+!******************
+
+
+!******************
+subroutine  solve_matrix (p, ap, ae, aw, an, as, bb, m, n)
+use global
+implicit none
+real,intent(inout),dimension(0:md,0:nd):: p
+real,intent(in),dimension(0:md,0:nd):: ap, ae, aw, an, as, bb
+integer,intent(in):: m, n
+
+! local variables
+real:: relux_factor, error
+real,dimension(0:md, 0:nd)::p_old
+integer::i, j, iter, iter_max
+
+! ----------------
+!   SOR algorithm
+! ----------------
+! iter_max = min(100,max(m,n)) ! SOR max interation steps
+iter_max = 50
+relux_factor=1.7 ! SOR reluxation factor
+
+do iter = 1, iter_max
+! write(*,*)'CHECK iteration no.'
+! error=0.
+
+! default periodic condition in y-direction
+do i = 1, m
+p(i,0)  =p(i,n)
+p(i,n+1)=p(i,1)
+end do
+
+! do i = 0, m+1
+! do j = 0, n+1
+!  p_old(i,j) = p(i,j)
+! end do
+! end do
+
+do i = 1, m
+do j = 1, n
+p(i,j) = (  bb(i,j)					&
+      - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
+      - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
+      /ap(i,j)    * relux_factor			&
+      + p_old(i,j) * (1.-relux_factor)
+end do
+end do
+
+end do
+
+! ----------------
+
+return
 end subroutine solve_matrix
 !******************
-  
+
 !******************
 subroutine  boundrary_matrix (p, ap, ae, aw, an, as, bb, m, n, height, yp)
-  use global
-    implicit none
-    real,intent(in)::	height
-    real,intent(in),dimension(0:md,0:nd)::		p
-    real,intent(inout),dimension(0:md,0:nd)::	ap, ae, aw, an, as, bb
-    real,intent(in),dimension(0:nd)::		yp
-    integer,intent(in)::	m, n
-
-  ! local variables
-  integer	i, j
-
-  ! ----------------
-  ! inlet (dp/x=0 at i=1)
-  do j= 1, n
-    ae(1,j) =ae(1,j)+aw(1,j)
-    aw(1,j) =0.
-  end do
-
-  ! outlet (p=outlet_pressure at i=m)
-  do j= 1, n
-    bb(m,j) =bb(m,j)+ae(m,j)*p(m+1,j)
-    ae(m,j) = 0.
-    aw(m,j) = 0.
-    an(m,j) = 0.
-    as(m,j) = 0.
-  end do
-
-  ! default : periodic condition in matrix solver
-
-  ! symmetry or wall (dp/dy=0. at j=1)   xp>0
-  !do i= 1,m
-  ! an(i,1) =an(i,1)+as(i,1)
-  ! as(i,1) = 0.
-  !end do
-
-  ! symmetry or wall  (dp/dy=0. at j=n)  xp>0
-  !do i= 1,m
-  ! as(i,n) =as(i,n)+an(i,n)
-  ! an(i,n) = 0.
-  !end do
-  ! ----------------
-
-  return
-end subroutine  boundrary_matrix
-!******************
-  
-!******************
-subroutine  solve_u (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, dx, dy, dt, m, n)
-  use global
+use global
   implicit none
-  real,intent(in)::	dx, dy, dt
-  real,intent(in)::	xnue, xlamda, density
-  real,intent(inout),dimension(0:md,0:nd)::	u, v, p, u_old, v_old
-  real,intent(in),dimension(0:md,0:nd)::	porosity
+  real,intent(in)::	height
+  real,intent(in),dimension(0:md,0:nd)::		p
+  real,intent(inout),dimension(0:md,0:nd)::	ap, ae, aw, an, as, bb
+  real,intent(in),dimension(0:nd)::		yp
   integer,intent(in)::	m, n
 
-  ! local variables
-  integer::	i, j
+! local variables
+integer	i, j
 
-  ! ----------------
-  do i = 1, m
-  do j = 1, n
-  ! convection_x  (1st upwind scheme)
-  ! (already calculated in solve_p)
+! ----------------
+! inlet (dp/x=0 at i=1)
+do j= 1, n
+  ae(1,j) =ae(1,j)+aw(1,j)
+  aw(1,j) =0.
+end do
 
-  ! convection_y
-  ! (already calculated in solve_p)
+! outlet (p=outlet_pressure at i=m)
+do j= 1, n
+  bb(m,j) =bb(m,j)+ae(m,j)*p(m+1,j)
+  ae(m,j) = 0.
+  aw(m,j) = 0.
+  an(m,j) = 0.
+  as(m,j) = 0.
+end do
 
-  ! diffusion_x
-  ! (already calculated in solve_p)
+! default : periodic condition in matrix solver
 
-  ! diffusion_y
-  ! (already calculated in solve_p)
+! symmetry or wall (dp/dy=0. at j=1)   xp>0
+!do i= 1,m
+! an(i,1) =an(i,1)+as(i,1)
+! as(i,1) = 0.
+!end do
 
-  ! pressure
-  u(i,j)=u(i,j) -dt/density*(p(i+1,j)-p(i-1,j))/dx*0.5
+! symmetry or wall  (dp/dy=0. at j=n)  xp>0
+!do i= 1,m
+! as(i,n) =as(i,n)+an(i,n)
+! an(i,n) = 0.
+!end do
+! ----------------
 
-  end do
-  end do
-
-  ! ----------------
-  return
-end subroutine solve_u
+return
+end subroutine  boundrary_matrix
 !******************
-  
-!******************
-subroutine  solve_v (p, u, v, u_old, v_old, porosity, xnue, xlamda, density, dx, dy, dt, m, n)
-  use global
-    implicit none
-    real,intent(in)::	dx, dy, dt
-    real,intent(in)::	xnue, xlamda, density
-    real,intent(inout),dimension(0:md,0:nd)::	u, v, p, u_old, v_old
-    real,intent(in),dimension(0:md,0:nd)::	porosity
-    integer,intent(in)::	m, n
 
-  ! local variables
-  integer::	i, j
-
-  ! ----------------
-  do i = 1, m
-  do j = 1, n
-  ! convection_x  (1st upwind scheme)
-  ! (already calculated in solve_p)
-
-  ! convection_y
-  ! (already calculated in solve_p)
-
-  ! diffusion_x
-  ! (already calculated in solve_p)
-
-  ! diffusion_y
-  ! (already calculated in solve_p)
-
-  ! pressure
-  v(i,j)=v(i,j) -dt/density*(p(i,j+1)-p(i,j-1))/dy*.5
-
-  end do
-  end do
-  ! ----------------
-  return
-end subroutine solve_v
-!******************
-  
 !  conditions
 
 !******************
 subroutine  boundary(p, u, v, xp, yp, width, height    &
-                      , inlet_velocity, outlet_pressure, AoA, porosity, m, n)
+                  , inlet_velocity, outlet_pressure, AoA, porosity, m, n)
   use global
   implicit none
   real,intent(in)::	width, height, inlet_velocity, outlet_pressure, AoA
@@ -783,18 +727,17 @@ subroutine  boundary(p, u, v, xp, yp, width, height    &
   return
 end subroutine boundary
 !*****************************
-  
+
 !*****************************
-subroutine physical_conditions(xnue, xlamda, density, width, height, time &
-                              , inlet_velocity, outlet_pressure, AoA, m, n, radius)
+subroutine physical_conditions(xnue, xlambda, density, width, height, time &
+                          , inlet_velocity, outlet_pressure, AoA, m, n, radius)
   use global
     implicit none
-    real,intent(inout):: xnue, xlamda, density, width, height, time  &
-                          ,inlet_velocity, outlet_pressure, AoA, radius
+    real,intent(inout):: xnue, xlambda, density, width, height, time  &
+                        ,inlet_velocity, outlet_pressure, AoA, radius
     integer,intent(in):: m, n
   ! local variables
     real:: reynolds_no
-    integer:: i, j
     real::depth
 
   ! ----------------
@@ -802,7 +745,7 @@ subroutine physical_conditions(xnue, xlamda, density, width, height, time &
   ! ----------------
   ! read input file
   ! by Nobuto Nakamichi 4/7/2023
-  namelist /physical/xnue, xlamda, density, width, height, depth, time  &
+  namelist /physical/xnue, xlambda, density, width, height, depth, time  &
                     ,inlet_velocity, outlet_pressure, AoA
   namelist /object/radius
 
@@ -821,7 +764,7 @@ subroutine physical_conditions(xnue, xlamda, density, width, height, time &
 
   write(*,*)
   write(*,*) 'xnue ='	, xnue
-  write(*,*) 'xlamda ='	, xlamda
+  write(*,*) 'xlambda ='	, xlambda
   write(*,*) 'density ='	, density
   write(*,*) 'width ='	, width
   write(*,*) 'height ='	, height
@@ -834,57 +777,122 @@ subroutine physical_conditions(xnue, xlamda, density, width, height, time &
   ! ----------------
 
   return
-end subroutine physical_conditions
+  end subroutine physical_conditions
+  !******************
+
+  !*****************************
+  subroutine read_settings(&
+  xnue, xlambda, density, width, height, depth, time,&
+  inlet_velocity, outlet_pressure, AoA,&
+  istep_max, istep_out,&
+  thickness, threshold, radius, center_x, center_y, center_z,&
+  nonslip,&
+  output_folder,csv_file,&
+  iter_max, relux_factor)
+
+  real, intent(out):: xnue, xlambda, density, width, height, depth, time
+  real, intent(out):: inlet_velocity, outlet_pressure, AoA
+  integer, intent(out):: istep_max, istep_out
+  real, intent(out):: thickness, threshold, radius, center_x, center_y, center_z
+  logical, intent(out):: nonslip
+  character(len=50), intent(out) :: output_folder
+  character(len=50), intent(out) :: csv_file
+  integer, intent(out):: iter_max
+  real, intent(out):: relux_factor
+
+  namelist /physical/xnue, xlambda, density, width, height, depth, time
+  namelist /physical/inlet_velocity, outlet_pressure, AoA
+  namelist /file_control/istep_out
+  namelist /grid_control/istep_max
+  namelist /porosity_control/thickness, threshold, radius, center_x, center_y, center_z
+  namelist /calculation_method/nonslip
+  namelist /directory_control/output_folder, csv_file
+  namelist /solver_control/iter_max, relux_factor
+  open(11,file="config/controlDict.txt",status="old",action="read")
+  read(11,nml=physical)
+  read(11,nml=file_control)
+  read(11,nml=grid_control)
+  read(11,nml=porosity_control)
+  read(11,nml=calculation_method)
+  read(11,nml=directory_control)
+  read(11,nml=solver_control)
+  close(11)
+
+  !--- check
+  write(*,*) '#'
+  write(*,*) '# --- Physical conditions'
+  write(*,*) '# xnue =', xnue
+  write(*,*) '# xlambda =', xlambda
+  write(*,*) '# density =', density
+  write(*,*) '# width =', width
+  write(*,*) '# height =', height
+  write(*,*) '# depth =', depth
+  write(*,*) '# time =', time
+  write(*,*) '# inlet_velocity =', inlet_velocity
+  write(*,*) '# outlet_pressure =', outlet_pressure
+  write(*,*) '# Angle of inlet_velocity (AoA) =', AoA
+  write(*,*) '#'
+  write(*,*) '# --- Porosity information'
+  write(*,*) '# thickness =', thickness
+  write(*,*) '# threshold =', threshold
+  write(*,*) '# radius =', radius
+  write(*,*) '#'
+  write(*,*) '# --- Directory information'
+  write(*,*) '# output_folder =', output_folder  
+  write(*,*) '# input_porosity_file =', csv_file  
+  write(*,*) '#'
+  write(*,*) '# --- Solver information'
+  write(*,*) '# SOR max iteration steps =', iter_max
+  write(*,*) '# SOR reluxation factor =', relux_factor
+  return
+end subroutine read_settings
+!*****************************
+
 !******************
-  
-!******************
-subroutine  grid_conditions (xp, yp, dx, dy, dt, xnue, xlamda, density, width, height, thickness, time &
-                            , inlet_velocity, AoA, porosity, m, n, istep_max, iset)
+subroutine  grid_conditions (&
+xp, yp, dx, dy, dt, xnue, xlambda, density, width, height, depth,&
+thickness, threshold, radius,&
+center_x, center_y, time,&
+inlet_velocity, AoA, porosity, m, n, istep_max,&
+csv_file)
+
   use global
   implicit none
-  real,intent(inout)::	dx, dy, dt, AoA, thickness
-  real,intent(in)::	xnue, xlamda, density, width, height, time, inlet_velocity
-  real,intent(inout),dimension(0:md,0:nd):: porosity
   real,intent(inout),dimension(0:md):: xp
   real,intent(inout),dimension(0:nd):: yp
-  integer,intent(inout):: m, n, istep_max, iset
+  real,intent(inout):: dx, dy, dt
+  real,intent(in):: xnue, xlambda, density, width, height, depth, time
+  real,intent(in):: inlet_velocity, AoA
+  real,intent(in):: thickness, threshold, radius, center_x, center_y
+  real,intent(inout),dimension(0:md,0:nd)::porosity
+  integer,intent(inout):: m, n
+  integer,intent(in):: istep_max
   character(len = 50) :: csv_file
   character(len = 50) :: output_folder
 
   ! local variables
   !real,dimension(0:md,0:nd)::	distance
-  integer:: x, y, z
-  real:: val, threshold
   real:: cfl_no, pecret_no, diffusion_factor, reynolds_no
-  real:: pai, distance, center_x, center_y, radius
-  integer::	i, j
-  real, parameter:: small=1.e-6, big=1.e6, zero=0.
-  ! ---
-
-  ! ----------------
-  ! namelist
-  ! by Nobuto Nakamichi 4/7/2023
-  namelist /grid_control/istep_max
-  namelist /porosity_control/thickness, threshold
-  namelist /directory_control/csv_file, output_folder
-  open(11,file="config/controlDict.txt",status="old",action="read")
-  read(11,nml=grid_control)
-  read(11,nml=porosity_control)
-  read(11,nml=directory_control)
-  close(11)
-  !-----------------
+  integer:: i, j
+  integer:: x, y, z
+  real:: poro_val
+  ! --- 
 
   ! read pixel data
   open(52,file=csv_file, form='formatted')
 
   read(52,*) m,n
 
-  do i=1,m*n
-    read(52,*) x, y, z, val
-    porosity(x,y) = max(val, threshold)
+  do j = 1, n
+    do i = 1, m
+    read(52, *) x, y, z, poro_val
+    porosity(x, y) = max(poro_val, threshold)
+    end do
   end do
-  close(52)
 
+  close(52) 
+
+  !--- calc.
   dx = width / real(m-1)
   dy = height / real(n-1)
   dt = time / real(istep_max)
@@ -893,47 +901,67 @@ subroutine  grid_conditions (xp, yp, dx, dy, dt, xnue, xlamda, density, width, h
   pecret_no        = inlet_velocity * dx / xnue
   diffusion_factor = xnue * dt / dy / dy
 
+  reynolds_no      = inlet_velocity * radius * 2.0 / xnue
 
   !----- check print out
   write(*,*)
-  write(*,*) 'm, n =', m, n
-  write(*,*) 'istep_max =', istep_max
-  write(*,*) 'dx, dy =', dx, dy
-  write(*,*) 'dt =', dt
-  write(*,*) 'cfl_no =', cfl_no
-  write(*,*) 'pecret_no =', pecret_no
-  write(*,*) 'diffusion_factor =', diffusion_factor
-  write(*,*) 'thickness =', thickness
-  write(*,*) 'threshold =', threshold
+  write(*,*) '# --- Grid conditions'
+  write(*,*) '# m, n =', m, n
+  write(*,*) '# istep_max =', istep_max
+  write(*,*) '# dx, dy =', dx, dy
+  write(*,*) '# dt =', dt
+  write(*,*) '# cfl_no =', cfl_no
+  write(*,*) '# pecret_no =', pecret_no
+  write(*,*) '# diffusion_factor =', diffusion_factor
+  write(*,*) '# reynolds_no =', reynolds_no
+  write(*,*) '# thickness =', thickness
+  write(*,*) '# threshold =', threshold
+  write(*,*)
 
+  !$omp parallel private(i, j) &
+  !$omp & shared(m, n) &
+  !$omp & shared(porosity) &
+  !$omp & shared(xp, yp) &
+  !$omp & shared(dx, dy) &
+  !$omp & shared(width, height, center_x, center_y) &
+  !$omp & default(none)
+
+  !$omp do      
   do i = 0, m+1
-  xp(i) = dx * real(i-1) - width*0.5
+  xp(i) = dx * real(i-1) - width*center_x
   end do
+  !$omp end do
 
+  !$omp do      
   do j = 0, n+1
-  yp(j) = dy * real(j-1) - height*0.5
+  yp(j) = dy * real(j-1) - height*center_y
   end do
+  !$omp end do
 
   ! default: outlet condtion in x-direction
+  !$omp do      
   do j = 1, n+1
   porosity(0,j) = porosity(1,j)
   porosity(m+1,j) = porosity(m,j)
   end do
+  !$omp end do
 
   ! default: periodic condtion in y-direction
+  !$omp do      
   do i = 0, m+1
   porosity(i,0)   = porosity(i,n)
   porosity(i,n+1) = porosity(i,1)
   end do
-
+  !$omp end do
+  !$omp end parallel
   ! ----------------
   return
 end subroutine  grid_conditions
 !******************
-  
+
 !******************
 subroutine  initial_conditions (p, u, v, xp, yp, width, height  &
-                                , inlet_velocity, outlet_pressure, AoA, m, n)
+                              , inlet_velocity, outlet_pressure, AoA, m, n)
   use global
     implicit none
     real,intent(in)::	width, height, inlet_velocity, outlet_pressure, AoA
@@ -959,9 +987,9 @@ subroutine  initial_conditions (p, u, v, xp, yp, width, height  &
   return
 end subroutine initial_conditions
 !******************
-  
+
 ! output
-  
+
 !******************
 subroutine  output_solution (p, u, v, m, n)
   use global
@@ -997,7 +1025,7 @@ subroutine  output_solution (p, u, v, m, n)
   return
 end subroutine output_solution
 !******************
-  
+
 !******************
 subroutine  output_grid (xp, yp, m, n)
   use global
@@ -1020,7 +1048,7 @@ subroutine  output_grid (xp, yp, m, n)
   return
 end subroutine output_grid
 !******************
-  
+
 !******************
 subroutine  output_grid_list (xp, yp, m, n, angle_of_attack)
   use global
@@ -1050,7 +1078,7 @@ subroutine  output_grid_list (xp, yp, m, n, angle_of_attack)
   return
 end subroutine output_grid_list
 !******************
-  
+
 !******************
 subroutine  output_solution_post (p, u, v, xp, yp, porosity, m, n)
   use global
@@ -1164,7 +1192,7 @@ subroutine  output_solution_post (p, u, v, xp, yp, porosity, m, n)
 end subroutine output_solution_post
 !******************
 
-  
+
 !******************
 subroutine  output_divergent (p, u, v, porosity, dx, dy, m, n)
   use global
@@ -1174,208 +1202,90 @@ subroutine  output_divergent (p, u, v, porosity, dx, dy, m, n)
   real,intent(in)::	dx, dy
   integer,intent(in)::	m, n
 
-! local variables
-integer::	i, j
-real,dimension(0:md,0:nd)::	div
+  ! local variables
+  integer::	i, j
+  real,dimension(0:md,0:nd)::	div
 
-open (63, file='etc/divergent.dat', status='replace')
-! ----------------
+  open (63, file='etc/divergent.dat', status='replace')
+  ! ----------------
 
-do i = 1, m
-do j = 1, n
-div(i,j)= ((porosity(i+1,j)*u(i,j)+porosity(i,j)*u(i+1,j))/2     &
-          -(porosity(i-1,j)*u(i,j)+porosity(i,j)*u(i-1,j))/2 )/dx &
+  do i = 1, m
+  do j = 1, n
+  div(i,j)= ((porosity(i+1,j)*u(i,j)+porosity(i,j)*u(i+1,j))/2     &
+        -(porosity(i-1,j)*u(i,j)+porosity(i,j)*u(i-1,j))/2 )/dx &
         +((porosity(i,j+1)*v(i,j)+porosity(i,j)*v(i,j+1))/2      &
-          -(porosity(i,j-1)*v(i,j)+porosity(i,j)*v(i,j-1))/2 )/dy
-end do
-end do
+        -(porosity(i,j-1)*v(i,j)+porosity(i,j)*v(i,j-1))/2 )/dy
+  end do
+  end do
 
-write(63,*)
-write(63,*)'porosity'
-do j = 1, n
-write(63,*) (porosity(i,j), i=1,m)
-end do
+  write(63,*)
+  write(63,*)'porosity'
+  do j = 1, n
+  write(63,*) (porosity(i,j), i=1,m)
+  end do
 
-write(63,*)
-write(63,*)'divergent velocity'
-do j = 1, n
-write(63,*) (div(i,j), i=1,m)
-end do
-write(63,*)
+  write(63,*)
+  write(63,*)'divergent velocity'
+  do j = 1, n
+  write(63,*) (div(i,j), i=1,m)
+  end do
+  write(63,*)
 
-! ----------------
-close (63)
+  ! ----------------
+  close (63)
 
 end subroutine  output_divergent
 !******************
 
 !******************
-subroutine  output_force_post (p, u, v, dx, dy, porosity, m, n, xnue, density, thickness, radius, inlet_velocity, istep)
-  use global
-  implicit none
-    real,intent(in),dimension(0:md,0:nd)::u, v, p
-    real,intent(in),dimension(0:md,0:nd)::porosity
-    real,intent(in)::dx, dy
-    integer,intent(in)::m, n, istep
-    real,intent(in)::xnue, density, thickness, radius, inlet_velocity
-
-  ! local variables
-    real, parameter::small=1.e-6, big=1.e6, zero=0.
-    real, parameter::alpha = 32.0
-    integer::i, j
-    real,dimension(0:md, 0:nd)::normal_x, normal_y
-    real,dimension(0:md, 0:nd)::delta_force_px, delta_force_py
-    real,dimension(0:md, 0:nd)::delta_force_vx, delta_force_vy
-    real,dimension(0:md, 0:nd)::force_xx, force_yy
-    real::normal_abs
-    real::force_x, force_y, force_px, force_vx, force_py, force_vy
-    real::cd, cl
-    character(5):: number
-    character(len=50)::csv_file
-    character(len=50)::output_folder
-
-    namelist /directory_control/csv_file, output_folder
-    open(11,file="config/controlDict.txt",status="old",action="read")
-    read(11,nml=directory_control)
-    close(11)
-
-    write(number,"(I5.5)")istep
-
-    open(61,file=trim(output_folder)//"/solution_force"//number//".dat",status="unknown",form="formatted",position="rewind")
-  ! ----------------
-
-    force_x = 0.0
-    force_y = 0.0
-    force_px = 0.0
-    force_vx = 0.0
-    force_py = 0.0
-    force_vy = 0.0
-    cd = 0.0
-    cl = 0.0
-
-    do i = 1, m
-    do j = 1, n
-      normal_abs = sqrt(((porosity(i+1,j) - porosity(i-1,j))*0.5)**2+((porosity(i,j+1) - porosity(i,j-1))*0.5)**2)
-      normal_x(i,j) = (porosity(i+1,j) - porosity(i-1,j))*0.5 / max(normal_abs,small)
-      normal_y(i,j) = (porosity(i,j+1) - porosity(i,j-1))*0.5 / max(normal_abs,small)
-      
-      delta_force_px(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*normal_x(i,j)
-      delta_force_py(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*normal_y(i,j)
-    
-      delta_force_vx(i,j) = -dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dx))**2*u(i,j)
-      delta_force_vy(i,j) = -dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dy))**2*v(i,j)
-    
-      force_px = force_px + delta_force_px(i,j)
-      force_py = force_py + delta_force_py(i,j)
-      force_vx = force_vx + delta_force_vx(i,j)
-      force_vy = force_vy + delta_force_vy(i,j)
-    end do
-    end do
-
-    force_x = force_px + force_vx
-    force_y = force_py + force_vy
-
-    cd = force_x / (density * inlet_velocity ** 2 * radius)
-    cl = force_y / (density * inlet_velocity ** 2 * radius)
-
-  !-----------------
-  ! write(61,*)'m, n =', m, n
-
-    write(61,*)'Fp =',force_px,force_py
-    write(61,*)'Fv =',force_vx,force_vy
-    write(61,*)'F  =',force_x,force_y
-    write(61,*)'Cd =', cd, 'Cl =', cl
-
-  ! write(61,*)'normal x'
-  ! do j = 1, n
-  ! write(61,*) (normal_x, i=1,m)
-  ! end do
-  ! write(61,*)'normal y'
-  ! do j = 1, n
-  ! write(61,*) (normal_y, i=1,m)
-  ! end do
-  ! write(61,*)'pressure force x'
-  ! do j = 1, n
-  ! write(61,*) (force_px, i=1,m)
-  ! end do
-  ! write(61,*)'pressure force y'
-  ! do j = 1, n
-  ! write(61,*) (force_py, i=1,m)
-  ! end do
-  ! write(61,*)'body force x'
-  ! do j = 1, n
-  ! write(61,*) (force_vx, i=1,m)
-  ! end do
-  ! write(61,*)'body force y'
-  ! do j = 1, n
-  ! write(61,*) (force_vy, i=1,m)
-  ! end do
-  ! write(61,*)'force x'
-  ! do j = 1, n
-  ! write(61,*) (force_xx, i=1,m)
-  ! end do
-  ! write(61,*)'force y'
-  ! do j = 1, n
-  ! write(61,*) (force_yy, i=1,m)
-  ! end do
-  close (61)
-  ! ----------------
-
-  return
-end subroutine output_force_post
-!******************
-  
-!******************
 subroutine  output_force_log (p, u, v, dx, dy, porosity, m, n, xnue, density, thickness, radius, inlet_velocity)
-  use global
-    implicit none
-    real,intent(in),dimension(0:md,0:nd)::u, v, p
-    real,intent(in),dimension(0:md,0:nd)::porosity
-    real,intent(in)::dx, dy
-    integer,intent(in)::m, n
-    real,intent(in)::xnue, density, thickness, radius, inlet_velocity
+use global
+  implicit none
+  real,intent(in),dimension(0:md,0:nd)::u, v, p
+  real,intent(in),dimension(0:md,0:nd)::porosity
+  real,intent(in)::dx, dy
+  integer,intent(in)::m, n
+  real,intent(in)::xnue, density, thickness, radius, inlet_velocity
 
   ! local variables
-    real, parameter::small=1.e-6, big=1.e6, zero=0.
-    real, parameter::alpha = 32.0
-    integer::i, j
-    real,dimension(0:md, 0:nd)::normal_x, normal_y
-    real,dimension(0:md, 0:nd)::delta_force_px, delta_force_py
-    real,dimension(0:md, 0:nd)::delta_force_vx, delta_force_vy
-    real,dimension(0:md, 0:nd)::force_xx, force_yy
-    real::normal_abs
-    real::force_x, force_y, force_px, force_vx, force_py, force_vy
-    real::cd, cl
+  real, parameter::small=1.e-6, big=1.e6, zero=0.
+  real, parameter::alpha = 32.0
+  integer::i, j
+  real::unit_normal_x_tmp, unit_normal_y_tmp
+  real::delta_force_px_tmp, delta_force_py_tmp
+  real::delta_force_vx_tmp, delta_force_vy_tmp
+  real::normal_abs
+  real::force_x, force_y, force_px, force_vx, force_py, force_vy
+  real::cd, cl
 
   ! ----------------
-
-  force_x = 0.0
-  force_y = 0.0
+  
   force_px = 0.0
   force_vx = 0.0
   force_py = 0.0
   force_vy = 0.0
-  cd = 0.0
-  cl = 0.0
 
+  !$omp parallel do private(i,j) reduction(+:force_px, force_py, force_vx, force_vy) &
+  !$omp shared(u, v, p, porosity, m, n, dx, dy, xnue, density)
   do i = 1, m
   do j = 1, n
     normal_abs = sqrt(((porosity(i+1,j) - porosity(i-1,j))*0.5)**2+((porosity(i,j+1) - porosity(i,j-1))*0.5)**2)
-    normal_x(i,j) = (porosity(i+1,j) - porosity(i-1,j))*0.5 / max(normal_abs,small)
-    normal_y(i,j) = (porosity(i,j+1) - porosity(i,j-1))*0.5 / max(normal_abs,small)
-    
-    delta_force_px(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*normal_x(i,j)
-    delta_force_py(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*normal_y(i,j)
-    
-    delta_force_vx(i,j) = -dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dx))**2*u(i,j)
-    delta_force_vy(i,j) = -dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dy))**2*v(i,j)
+    unit_normal_x_tmp = (porosity(i+1,j) - porosity(i-1,j))*0.5 / max(normal_abs,small)
+    unit_normal_y_tmp = (porosity(i,j+1) - porosity(i,j-1))*0.5 / max(normal_abs,small)
 
-    force_px = force_px + delta_force_px(i,j)
-    force_py = force_py + delta_force_py(i,j)
-    force_vx = force_vx + delta_force_vx(i,j)
-    force_vy = force_vy + delta_force_vy(i,j)
+    delta_force_px_tmp = -dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*unit_normal_x_tmp
+    delta_force_py_tmp = -dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*unit_normal_y_tmp
+
+    delta_force_vx_tmp = +dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dx))**2*u(i,j)
+    delta_force_vy_tmp = +dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dy))**2*v(i,j)
+
+    force_px = force_px + delta_force_px_tmp
+    force_py = force_py + delta_force_py_tmp
+    force_vx = force_vx + delta_force_vx_tmp
+    force_vy = force_vy + delta_force_vy_tmp
   end do
   end do
+  !$omp end parallel do
 
   force_x = force_px + force_vx
   force_y = force_py + force_vy
@@ -1391,9 +1301,9 @@ subroutine  output_force_log (p, u, v, dx, dy, porosity, m, n, xnue, density, th
   return
 end subroutine output_force_log
 !******************
-  
+
 !******************
-subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, density, thickness, radius, inlet_velocity)
+subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, inlet_velocity, output_folder)
   use global
   implicit none
   real,intent(in),dimension(0:md)::xp
@@ -1401,42 +1311,13 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, dens
   real,intent(in),dimension(0:md, 0:nd)::u, v, p
   real,intent(in),dimension(0:md,0:nd)::porosity
   integer,intent(in)::m, n
-  real,intent(in)::dx, dy, xnue, density, thickness, radius, inlet_velocity
+  real,intent(in)::inlet_velocity
 
   ! local variables
-  integer::	i, j
+  integer::i, j
   real,dimension(0:md,0:nd):: div
-  character(len=50)::csv_file
   character(len=50)::output_folder
   real, parameter::small=1.e-6, big=1.e6, zero=0.
-  real, parameter::alpha = 32.0
-  real,dimension(0:md, 0:nd)::normal_x, normal_y
-  real,dimension(0:md, 0:nd)::force_px, force_py
-  real,dimension(0:md, 0:nd)::force_vx, force_vy
-  real,dimension(0:md, 0:nd)::force_xx, force_yy
-  real::normal_abs
-
-  namelist /directory_control/csv_file, output_folder
-  open(11,file="config/controlDict.txt",status="old",action="read")
-  read(11,nml=directory_control)
-  close(11)
-
-  do i = 1, m
-  do j = 1, n
-  normal_abs = max(small, sqrt(((porosity(i+1,j) - porosity(i-1,j))*0.5)**2+((porosity(i,j+1) - porosity(i,j-1))*0.5)**2))
-  normal_x(i,j) = (porosity(i+1,j) - porosity(i-1,j))*0.5 / normal_abs
-  normal_y(i,j) = (porosity(i,j+1) - porosity(i,j-1))*0.5 / normal_abs
-
-  force_px(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*normal_x(i,j)
-  force_py(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*normal_y(i,j)
-
-  force_vx(i,j) = -dx*dy*porosity(i,j)*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dx))**2*u(i,j)
-  force_vy(i,j) = -dx*dy*porosity(i,j)*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dy))**2*v(i,j)
-
-  force_xx(i,j) = force_px(i,j) + force_vx(i,j)
-  force_yy(i,j) = force_py(i,j) + force_vy(i,j)
-  end do
-  end do
 
   open(50,file=trim(output_folder)//'/output_paraview.vtk',status="unknown",form="formatted",position="rewind")
   !open(*,file='solution.vtk',status="replace")
@@ -1452,7 +1333,7 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, dens
   write(50,"('POINTS ',i9,' float')") m*n
   do j=1,n
   do i=1,m
-    write(50,"(3(f16.4,1x))") xp(i), yp(j), 0.0d0
+  write(50,"(3(f16.4,1x))") xp(i), yp(j), 0.0d0
   enddo
   enddo
 
@@ -1462,7 +1343,7 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, dens
   write(50,"('VECTORS velocity float')")
   do j=1,n
   do i=1,m
-    write(50,"(3(f16.4,1x))") u(i,j), v(i,j), 0.0d0
+  write(50,"(3(f16.4,1x))") u(i,j), v(i,j), 0.0d0
   enddo
   enddo
 
@@ -1470,33 +1351,18 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, dens
   write(50,"('VECTORS velocityInFluid float')")
   do j=1,n
   do i=1,m
-    write(50,"(3(f16.4,1x))") u(i,j)*porosity(i,j), v(i,j)*porosity(i,j), 0.0d0
+  write(50,"(3(f16.4,1x))") u(i,j)*porosity(i,j), v(i,j)*porosity(i,j), 0.0d0
   enddo
   enddo
 
   !! velocity vector
-  write(50,"('VECTORS dimles_v float')")
+  write(50,"('VECTORS dimless_v float')")
   do j=1,n
   do i=1,m
-    write(50,"(3(f16.4,1x))") u(i,j)*porosity(i,j)/inlet_velocity, v(i,j)*porosity(i,j)/inlet_velocity, 0.0d0
+  write(50,"(3(f16.4,1x))") u(i,j)*porosity(i,j)/inlet_velocity, v(i,j)*porosity(i,j)/inlet_velocity, 0.0d0
   enddo
   enddo
 
-  !! force vector
-  write(50,"('VECTORS force float')")
-  do j=1,n
-  do i=1,m
-  write(50,"(3(f16.4,1x))") force_xx(i,j), force_yy(i,j), 0.0d0
-  enddo
-  enddo
-
-  !! normal vector
-  write(50,"('VECTORS normal float')")
-  do j=1,n
-  do i=1,m
-  write(50,"(3(f16.4,1x))") normal_x(i,j), normal_y(i,j), 0.0d0
-  enddo
-  enddo
 
   !! pressure
   write(50,"('SCALARS pressure float')")
@@ -1507,11 +1373,17 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, dens
   enddo
   enddo
 
+  !$omp parallel private(i, j) &
+  !$omp & shared(div, u, v, xp, yp, m, n) &
+  !$omp & default(none)
+  !$omp do
   do i = 1, m
   do j = 1, n
   div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(j+1)-xp(j-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
   end do
   end do
+  !$omp end do
+  !$omp end parallel
 
   !! divergent velocity
   write(50,"('SCALARS VelocityDivergent float')")
@@ -1531,58 +1403,38 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, dens
   enddo
   enddo
 
+  !! dimless_velocity
+  write(50,"('SCALARS abs_dimless_v float')")
+  do j=1,n
+  do i=1,m
+  write(50,"(3(f16.4,1x))") sqrt((u(i,j)*porosity(i,j)/inlet_velocity)**2+(v(i,j)*porosity(i,j)/inlet_velocity)**2)
+  enddo
+  enddo
+
+  ! ----------------
   close(50)
 
   return
 end subroutine  output_paraview
 !******************
-  
+
 !******************
-subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue, density, thickness, radius, inlet_velocity, istep)
+subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, inlet_velocity, istep, output_folder)
   use global
   implicit none
-  real,intent(in),dimension(0:md)::	xp
-  real,intent(in),dimension(0:nd)::	yp
-  real,intent(in),dimension(0:md, 0:nd)::	u, v, p
-  real,intent(in),dimension(0:md,0:nd)::	porosity
-  integer,intent(in)::	m, n, istep
-  real,intent(in)::dx, dy, xnue, density, thickness, radius, inlet_velocity
+  real,intent(in),dimension(0:md)::xp
+  real,intent(in),dimension(0:nd)::yp
+  real,intent(in),dimension(0:md, 0:nd)::u, v, p
+  real,intent(in),dimension(0:md,0:nd)::porosity
+  integer,intent(in)::m, n, istep
+  real,intent(in)::inlet_velocity
 
   ! local variables
-  integer::	i, j
+  integer::i, j
   real,dimension(0:md,0:nd):: div
   character(5):: number
-  character(len=50)::csv_file
   character(len=50)::output_folder
   real, parameter::small=1.e-6, big=1.e6, zero=0.
-  real, parameter::alpha = 32.0
-  real,dimension(0:md, 0:nd)::normal_x, normal_y
-  real,dimension(0:md, 0:nd)::force_px, force_py
-  real,dimension(0:md, 0:nd)::force_vx, force_vy
-  real,dimension(0:md, 0:nd)::force_xx, force_yy
-  real::normal_abs
-
-  namelist /directory_control/csv_file, output_folder
-  open(11,file="config/controlDict.txt",status="old",action="read")
-  read(11,nml=directory_control)
-  close(11)
-
-  do i = 1, m
-  do j = 1, n
-    normal_abs = max(small, sqrt(((porosity(i+1,j) - porosity(i-1,j))*0.5)**2+((porosity(i,j+1) - porosity(i,j-1))*0.5)**2))
-    normal_x(i,j) = (porosity(i+1,j) - porosity(i-1,j))*0.5 / normal_abs
-    normal_y(i,j) = (porosity(i,j+1) - porosity(i,j-1))*0.5 / normal_abs
-    
-    force_px(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*normal_x(i,j)
-    force_py(i,j) = dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*normal_y(i,j)
-    
-    force_vx(i,j) = -dx*dy*porosity(i,j)*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dx))**2*u(i,j)
-    force_vy(i,j) = -dx*dy*porosity(i,j)*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dy))**2*v(i,j)
-  
-    force_xx(i,j) = force_px(i,j) + force_vx(i,j)
-    force_yy(i,j) = force_py(i,j) + force_vy(i,j)
-  end do
-  end do
 
   write(number,"(I5.5)")istep
 
@@ -1624,28 +1476,13 @@ subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue,
   enddo
 
   !! velocity vector
-  write(65,"('VECTORS dimles_v float')")
+  write(65,"('VECTORS dimless_v float')")
   do j=1,n
   do i=1,m
   write(65,"(3(f16.4,1x))") u(i,j)*porosity(i,j)/inlet_velocity, v(i,j)*porosity(i,j)/inlet_velocity, 0.0d0
   enddo
   enddo
 
-  ! force vector
-  write(65,"('VECTORS force float')")
-  do j=1,n
-  do i=1,m
-  write(65,"(3(e16.4,1x))") force_xx(i,j), force_yy(i,j), 0.0d0
-  enddo
-  enddo
-
-  !! normal vector
-  write(65,"('VECTORS normal float')")
-  do j=1,n
-  do i=1,m
-  write(65,"(3(f16.4,1x))") normal_x(i,j), normal_y(i,j), 0.0d0
-  enddo
-  enddo
 
   !! pressure
   write(65,"('SCALARS pressure float')")
@@ -1656,11 +1493,17 @@ subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue,
   enddo
   enddo
 
+  !$omp parallel private(i, j) &
+  !$omp & shared(div, u, v, xp, yp, m, n) &
+  !$omp & default(none)
+  !$omp do
   do i = 1, m
   do j = 1, n
   div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(j+1)-xp(j-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
   end do
   end do
+  !$omp end do
+  !$omp end parallel
 
   !! divergent velocity
   write(65,"('SCALARS VelocityDivergent float')")
@@ -1680,9 +1523,32 @@ subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, dx, dy, xnue,
   enddo
   enddo
 
+  !! dimless_velocity
+  write(65,"('SCALARS abs_dimless_v float')")
+  do j=1,n
+  do i=1,m
+  write(65,"(3(f16.4,1x))") sqrt((u(i,j)*porosity(i,j)/inlet_velocity)**2+(v(i,j)*porosity(i,j)/inlet_velocity)**2)
+  enddo
+  enddo
+
   ! ----------------
   close(65)
 
   return
 end subroutine  output_paraview_temp
+!******************
+
+! tools
+
+!******************
+subroutine get_now_time()
+  implicit none
+  character(len=20) :: current_time
+  integer ::values(8)
+  call date_and_time(values=values)
+  write(current_time, '(I4.4,"-",I2.2,"-",I2.2," ",I2.2,":",I2.2,":",I2.2)') &
+    values(1), values(2), values(3), values(5), values(6), values(7)
+  write(*,*) '# --- Now: ', trim(current_time)
+  return
+end subroutine get_now_time
 !******************
