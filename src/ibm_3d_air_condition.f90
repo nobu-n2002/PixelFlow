@@ -683,8 +683,10 @@ subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, &
   ! ----------------
 
   !$acc data copy(p) &
-  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb, relux_factor) &
+  !$acc & copyin(ap, ae, aw, an, as, at, ab, bb) &
   !$acc & create(p_old)
+
+  error = 0.0
 
   do iter = 1, iter_max
   ! write(*,*)'CHECK iteration no.'
@@ -720,9 +722,9 @@ subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, &
   !$acc loop independent
   do j = 0, n+1
   !$acc loop independent
-    do k = 0, l+1
-      p_old(i,j,k) = p(i,j,k)
-    end do
+  do k = 0, l+1
+    p_old(i,j,k) = p(i,j,k)
+  end do
   end do
   end do
   !$acc end kernels
@@ -825,7 +827,18 @@ subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, &
   end do
   !$acc end kernels
 
-  ! write(*,*)'CHECK iteration no.', iter,'  -- error=', error
+  !$acc kernels
+  !$acc loop independent reduction(max:error)
+  do k = 1, l
+  !$acc loop independent reduction(max:error)
+    do j = 1, n
+  !$acc loop independent reduction(max:error)
+      do i = 1, m
+        error = max(error, abs(p_old(i,j,k)-p(i,j,k)))
+      end do 
+    end do
+  end do
+  !$acc end kernels
 
   end do
 
@@ -853,9 +866,9 @@ subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, &
   ! end do
   ! !$acc end kernels
 
+  write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
+  
   !$acc end data 
-
-  ! write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
 
   return
 end subroutine solve_matrix_vec_oacc
