@@ -1250,6 +1250,7 @@ use global
   ! local variables
   real, parameter::small=1.e-6, big=1.e6, zero=0.
   real, parameter::alpha = 32.0
+  real, parameter::beta = 2.0
   integer::i, j
   real::unit_normal_x_tmp, unit_normal_y_tmp
   real::delta_force_px_tmp, delta_force_py_tmp
@@ -1273,8 +1274,8 @@ use global
     unit_normal_x_tmp = (porosity(i+1,j) - porosity(i-1,j))*0.5 / max(normal_abs,small)
     unit_normal_y_tmp = (porosity(i,j+1) - porosity(i,j-1))*0.5 / max(normal_abs,small)
 
-    delta_force_px_tmp = -dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*unit_normal_x_tmp
-    delta_force_py_tmp = -dx*dy*p(i,j)*2*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*unit_normal_y_tmp
+    delta_force_px_tmp = -dx*dy*beta*p(i,j)*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dx)*unit_normal_x_tmp
+    delta_force_py_tmp = -dx*dy*beta*p(i,j)*porosity(i,j)*(1.0-porosity(i,j))/(thickness*dy)*unit_normal_y_tmp
 
     delta_force_vx_tmp = +dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dx))**2*u(i,j)
     delta_force_vy_tmp = +dx*dy*alpha*density*xnue*((porosity(i,j)*(1.0-porosity(i,j)))/(thickness*dy))**2*v(i,j)
@@ -1290,8 +1291,8 @@ use global
   force_x = force_px + force_vx
   force_y = force_py + force_vy
 
-  cd = force_x / (density * inlet_velocity ** 2 * radius)
-  cl = force_y / (density * inlet_velocity ** 2 * radius)
+  cd = force_x / (0.5*density * inlet_velocity ** 2 * 2.0*radius)
+  cl = force_y / (0.5*density * inlet_velocity ** 2 * 2.0*radius)
 
   write(*,*)'Fp =',force_px,force_py
   write(*,*)'Fv =',force_vx,force_vy
