@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# _________________________________________________________________________________ #
+#                                                                                   #
+#           _|                      _|      _|_|  _|                                #
+# _|_|_|        _|    _|    _|_|    _|    _|      _|    _|_|    _|      _|      _|  #
+# _|    _|  _|    _|_|    _|_|_|_|  _|  _|_|_|_|  _|  _|    _|  _|      _|      _|  #
+# _|    _|  _|  _|    _|  _|        _|    _|      _|  _|    _|    _|  _|  _|  _|    #
+# _|_|_|    _|  _|    _|    _|_|_|  _|    _|      _|    _|_|        _|      _|      #
+# _|                                                                                #
+# _|                                                                                #
+#                                                                                   #
+# Author: Nobuto NAKAMICHI, Younghwa CHO, Nobuyuki OSHIMA                           #
+# Date: 25.02.2024                                                                  #
+# Description:                                                                      #
+#   This script builds all source code and creates a new project workspace.         #
+# _________________________________________________________________________________ #
+
 # Check if an argument is provided
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <folder_name>"
