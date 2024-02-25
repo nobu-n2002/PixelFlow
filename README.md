@@ -9,15 +9,13 @@ This is an implementation based on the paper "A Novel approach for wall-boundary
 For comprehensive insights into the proposed methodology and findings presented in our work, please consider referencing the [paper](https://doi.org/10.1299/jfst.2023jfst0034):
 
 ```bibtex
-@article{oshima2023novel,
-  title={A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation)},
-  author={Oshima, Nobuyuki},
-  journal={Journal of Fluid Science and Technology},
-  volume={18},
-  number={4},
-  pages={JFST0034--JFST0034},
-  year={2023},
-  publisher={The Japan Society of Mechanical Engineers}
+@InProceedings{Oshima_2023_MEJ,
+  author    = {Nobuyuki OSHIMA},
+  title     = {A Novel Approach for Wall-boundary Immersed Flow Simulation: Proposal of Modified Navier-Stokes Equation},
+  booktitle = {Mechanical Engineering Journal},
+  volume    = {18},
+  number    = {4},
+  year      = {2023},
 }
 ```
 
@@ -42,7 +40,6 @@ For comprehensive insights into the proposed methodology and findings presented 
   - [References](#references)
   - [Example](#example)
     - [Running a Test Case](#running-a-test-case)
-    - [Expected Output](#expected-output)
 
 ## Installation
 
@@ -63,13 +60,13 @@ For comprehensive insights into the proposed methodology and findings presented 
 4. Make the initialization script executable:
 
     ```bash
-    chmod +x init.sh run.sh
+    chmod +x project.sh
     ```
 
 5. Run the initialization script:
 
     ```bash
-    sh init.sh
+    sh project.sh your_project
     ```
 
 6. Check the `bin` Folder:
@@ -85,7 +82,7 @@ For comprehensive insights into the proposed methodology and findings presented 
 7. Grant execution permissions to the executable files in the `bin` folder:
 
     ```bash
-    chmod +x bin/ibm2 bin/ibm3
+    chmod +x bin/*
     ```
 
 8. Verify the `config` Folder:
@@ -93,6 +90,7 @@ For comprehensive insights into the proposed methodology and findings presented 
    - Open a terminal or command prompt and run the following command to confirm the existence of the `controlDict.txt` file in the `config` folder.
 
      ```bash
+     cd your_project
      ls config
      ```
 
@@ -115,57 +113,61 @@ For comprehensive insights into the proposed methodology and findings presented 
 2. Edit the variables according to your simulation requirements.
 
     ```plaintext
-    &physical
-    xnue = 0.025000
-    # ... other parameters ...
-    /
-
-    &file_control
-    istep_out = 10001
-    /
-    # ... other sections ...
+   !********************************************
+   &physical
+   !--- Kinematic viscosity coefficient [m2/s]
+   xnue = 0.001000
+   !--- Second viscosity coefficient [m2/s]
+   xlambda = 0.000000
+   !--- Fluid density [kg/m3]
+   density = 1.000000
+   !--- Domein [m]
+   width   = 1.0000000
+   height  = 1.0000000
+   depth   = 1.0000000
+   !--- Simulation time [s]
+   time = 1.000000 
+    ...
+   !********************************************
+   &solver_control
+   !--- SOR max iteration steps
+   iter_max        = 100
+   !--- SOR reluxation factor (1<w<2)
+   relux_factor    = 1.700000
+   /
+   !********************************************
     ```
 
 3. Save the changes and close the file.
 
 ### Running Simulations
 
-1. Open the `run.sh` script in a text editor.
-
-2. Locate the `DIMENSION` variable within the script and set it to either 2 or 3.
-
-    ```bash
-    # init.sh
-
-    # Set the dimension to 2 or 3
-    DIMENSION=2
-    ```
-
-3. Run the simulation script:
+1. Run the simulation script:
 
     ```bash
     sh run.sh
     ```
 
-4. View the progress in the `logs/` directory, and the output in the `{output_folder}/` directory.
-5. If you need to forcibly stop the computation midway, you can check the running processes by entering ps in the terminal. For example, the output might look like this:
-
-    ```bash
-    ps
-    ```
+   You will be prompted to select an executable file. If you are using OpenMP parallelization code, please enter the number of OpenMP parallel threads.
 
    ```bash
-   Copy code
-     PID TTY          TIME CMD
-   16149 pts/6    00:00:00 bash
-   18326 pts/6    00:38:34 ibm2
-   18931 pts/6    00:00:00 ps
+   Available executable files:
+   0: ibm2_drag_omp
+   1: ibm2_omp
+   2: ibm3_air_condition_omp
+   3: ibm3_omp
+   Enter the number of the executable file to run: 1
+   Enter the number of threads to use for execution:3
+   Running ibm2_omp...
    ```
 
-   To stop the execution of ibm2, input kill {PID} in the terminal. This will terminate the running process of ibm2.
+2. The processes are output to `runlog_*.txt` files inside the `logs/` folder.
+   Additionally, execution information is output to `process.txt` inside the `logs/` folder.
+3. The output in the `{output_folder}/` directory.
+4. If you need to forcibly stop the computation midway, you can check the running processes by entering ps in the terminal. For example, the output might look like this:
 
     ```bash
-    kill 18326
+    sh quit.sh
     ```
 
 ## Configuring Simulations
@@ -194,7 +196,6 @@ The `config/controlDict.txt` file contains parameters that define the properties
 ### &porosity_control Section
 
 - **`thickness`**: Thickness of boundary region ($\Delta/dx$).
-- **`threshold`**: Minimum value of the porosity.
 
 ### &calculation_method Section
 
@@ -219,79 +220,73 @@ Adjust these parameters according to your simulation requirements. The `output_f
 
 To ensure that the application is set up correctly, you can run a provided test case located in the `test/` folder. Follow these steps:
 
+Note: Please complete the Installation process, create an appropriate working folder, and then proceed with building the source code using the project.sh script.
+
 1. Open a terminal and navigate to the application directory:
 
     ```bash
     cd PixelFlow
     ```
 
-2. Run the provided test script and grant execution permissions to `init.sh` and `run.sh`:
+2. Unzip the cylinder-2d.zip file located in the test folder and move it to cylinder-2d/.:
 
     ```bash
-    cd test
+    unzip test/cylinder-2d.zip
+    cd cylinder-2d
     ```
 
-    ```bash
-    chmod +x init.sh run.sh
-    ```
+3. Run the simulation script:
 
-3. Run the initialization script:
+   ```bash
+   sh run.sh
+   ```
 
-    ```bash
-    sh init.sh
-    ```
+   You will be prompted to select an executable file, so please choose either ibm2_drag_omp or ibm2_omp.Please enter the number of OpenMP parallel threads.
 
-4. Confirm the creation of the executable files in the `bin` folder and the `controlDict.txt` file in the `config` folder:
+   ```bash
+   Available executable files:
+   0: ibm2_drag_omp
+   1: ibm2_omp
+   2: ibm3_air_condition_omp
+   3: ibm3_omp
+   Enter the number of the executable file to run: 1
+   Enter the number of threads to use for execution:3
+   Running ibm2_omp...
+   ```
 
-    ```bash
-    ls bin/ibm2 config/controlDict.txt
-    ```
+   The processes are output to runlog_*.txt files inside the logs folder.
+   Additionally, execution information is output to process.txt inside the logs folder.
 
-5. Grant execution permissions to the executable files in the `bin` folder:
-
-    ```bash
-    chmod +x bin/ibm2
-    ```
-
-6. Run the simulation script:
-
-    ```bash
-    sh run.sh
-    ```
-
-7. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
-8. Upon successful completion of the 2D test case, your directory structure should resemble the following:
+4. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
+5. Upon successful completion of the 2D test case, your directory structure should resemble the following:
 
    ```plaintext
    .
-   ├── bin
-   │   └── ibm2
    ├── config
    │   └── controlDict.txt
+   ├── cylinder
+   │   └── output_paraview.vtk
    ├── data
-   │   ├── circle.csv
-   │   └── stanford_dragon.csv
-   ├── data.zip
+   │   └── porosity_cylinder.csv
+   ├── doc
+   │   ├── fig
+   │   │   └── test-cylinder.png
+   │   └── info.md
    ├── etc
    │   ├── divergent.dat
    │   ├── grid.dat
    │   ├── solution_uvp.dat
    │   └── surface_profile.dat
-   ├── init.sh
    ├── logs
-   │   └── runlog_*.txt
-   ├── run.sh
-   ├── scripts/
-   ├── src
-   │   ├── ibm_2d.f90
-   │   └── ibm_3d.f90
-   └── test2d
-       └── output_paraview.vtk
+   │   ├── process.txt
+   │   └── runlog_2024.02.25-23.46.31.txt
+   ├── quit.sh
+   └── run.sh
    ```
 
-9. To confirm the successful execution of the 2D test case, follow these steps:
+6. To confirm the successful execution of the 2D test case, follow these steps:
 
-   1. Locate the `output_paraview.vtk` file in the `test2d` directory.
+   1. Locate the `output_paraview.vtk` file in the `cylinder` directory.
 
    2. Open the file using visualization software such as Paraview.
 
@@ -300,38 +295,3 @@ To ensure that the application is set up correctly, you can run a provided test 
    Congratulations! You have successfully completed the 2D test case. If you encounter any difficulties or have further questions, please refer to the provided documentation or seek assistance from our support channels.
 
    Thank you for your efforts!
-
-10. To perform computations for a 3D test case, set DIMENSION=3 in both init.sh and run.sh, and execute the following commands in sequence:
-
-    ```bash
-    # test/init.sh
-
-    # Set the DIMENSION variable to 2 for a 2D cylindrical case
-    # Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
-    DIMENSION=3
-    ```
-
-    ```bash
-    # test/run.sh
-
-    # Set the DIMENSION variable to 2 for a 2D cylindrical case
-    # Set the DIMENSION variable to 3 for a 3D Stanford Dragon case
-    DIMENSION=3
-    ```
-
-    ```bash
-    sh init.sh
-    ```
-
-    ```bash
-    sh run.sh
-    ```
-
-### Expected Output
-
-Upon successful execution of the test case, you should observe the following:
-
-- A log file in the `logs/` directory (e.g., `logs/runlog_test.txt`).
-- Output files in the `test2d` or `test3d` directory.
-
-Feel free to explore the contents of the log file and output folder to verify that the simulation ran as expected.
