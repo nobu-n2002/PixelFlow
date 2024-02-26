@@ -4,10 +4,10 @@
 
 ![global cond.](fig/test-cylinder.png)
 
-filename: porosity_cylinder.csv
-dimension: 1024$\Delta$x512$\Delta$
-thickness: 1.5
-radius: 16$\Delta$
+- filename: porosity_cylinder.csv
+- dimension: 1024 $\Delta$ $\times$ 512 $\Delta$
+- thickness: 1.5
+- radius: 16 $\Delta$
 
 Boundary conditions: Periodic boundary conditions on the top and bottom, uniform flow (left), pressure fixed (right).
 
