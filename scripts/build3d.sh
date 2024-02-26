@@ -44,7 +44,6 @@ mkdir -p ${BIN_DIR}
 cd ${BIN_DIR}
 echo
 
-# build 2d program (openMP parallel code for Multi CPUs)
 # Start spinner animation in background
 (
     while true; do
@@ -65,6 +64,7 @@ echo
 spinner_pid=$!
 
 # ===============================================================
+# build 2d program (openMP parallel code for Multi CPUs)
 echo ""
 echo 'Build 3d program (openMP parallel code for Multi CPUs)'
 SRC1=ibm_3d_omp_cpu.f90

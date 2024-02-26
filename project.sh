@@ -1,53 +1,62 @@
 #!/bin/bash
 
-# _________________________________________________________________________________ #
-#                                                                                   #
-#           _|                      _|      _|_|  _|                                #
-# _|_|_|        _|    _|    _|_|    _|    _|      _|    _|_|    _|      _|      _|  #
-# _|    _|  _|    _|_|    _|_|_|_|  _|  _|_|_|_|  _|  _|    _|  _|      _|      _|  #
-# _|    _|  _|  _|    _|  _|        _|    _|      _|  _|    _|    _|  _|  _|  _|    #
-# _|_|_|    _|  _|    _|    _|_|_|  _|    _|      _|    _|_|        _|      _|      #
-# _|                                                                                #
-# _|                                                                                #
-#                                                                                   #
-# Author: Nobuto NAKAMICHI, Younghwa CHO, Nobuyuki OSHIMA                           #
-# Date: 25.02.2024                                                                  #
-# Description:                                                                      #
-#   This script builds all source code and creates a new project workspace.         #
-# _________________________________________________________________________________ #
+# Function to display script usage
+display_usage() {
+    echo "Usage: $0 [OPTIONS] <folder_name>"
+    echo "Options:"
+    echo "  -b                 Build all source codes"
+    echo "  -f <folder_name>   Create a new folder with the specified name"
+    echo "  -h                 Display Usage"
+}
 
-# Check if an argument is provided
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <folder_name>"
-    exit 1
+# Initialize flags
+run_build=false
+create_folder=false
+folder_name=""
+
+# Parse options
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        -b) run_build=true;;
+        -build) run_build=true;;
+        -f) create_folder=true; folder_name="$2"; shift ;;
+        -folder) create_folder=true; folder_name="$2"; shift ;;
+        -bf|-fb) run_build=true; create_folder=true; folder_name="$2"; shift ;;
+        -h|--help) display_usage; exit 0 ;;
+        *) echo "Error: Invalid option '$1'"; display_usage; exit 1 ;;
+    esac
+    shift
+done
+
+# Check if both -b and -f options are provided
+if [ "$run_build" = true ]; then
+    # Run buildAll.sh script
+    sh scripts/buildAll.sh
 fi
 
-# Get folder name from the argument
-folder_name="$1"
+# Check if -f option is provided
+if [ "$create_folder" = true ]; then
+    # Create the folder
+    mkdir -p "$folder_name"
 
-# Create the folder
-mkdir "$folder_name"
+    # Check if folder creation was successful
+    if [ $? -eq 0 ]; then
+        echo "Folder '$folder_name' created successfully."
+    else
+        echo "Error: Failed to create folder '$folder_name'."
+        exit 1
+    fi
 
-# Check if folder creation was successful
-if [ $? -eq 0 ]; then
-    echo "Folder '$folder_name' created successfully."
-else
-    echo "\e[1;31m Error: \e[0m Failed to create folder '$folder_name'."
-    exit 1
+    # Make directory
+    cd "$folder_name" || exit
+    echo "Making directory"
+    echo "mkdir -p data config"
+    mkdir -p data config
+
+    echo "../scripts/control.sh"
+    sh ../scripts/control.sh
+
+    echo ""
+    echo "Project $folder_name was completed to build."
+    echo ""
 fi
-
-sh scripts/buildAll.sh
-
-# Make directory
-cd "$folder_name"
-echo "Making directory"
-echo "mkdir -p data config"
-mkdir -p data config
-
-echo "../scripts/control.sh"
-sh ../scripts/control.sh
-
-echo ""
-echo "Project $folder_name was completed to build."
-echo ""
-exit 0

@@ -66,7 +66,23 @@ For comprehensive insights into the proposed methodology and findings presented 
 5. Run the initialization script:
 
     ```bash
-    sh project.sh your_project
+    sh project.sh -b -f your_project
+    ```
+
+    The usage of project.sh is as follows:
+
+    ```bash
+   Usage: project.sh [OPTIONS] <folder_name>
+   Options:
+     -b                 Build all source codes
+     -f <folder_name>   Create a new folder with the specified name
+     -h                 Display Usage
+    ```
+
+    If you only want to build the source code, please execute it with only the `-b` option as follows.
+
+    ```bash
+    sh project.sh -b
     ```
 
 6. Check the `bin` Folder:
@@ -96,7 +112,7 @@ For comprehensive insights into the proposed methodology and findings presented 
 
    - Confirm that the `controlDict.txt` file is present in the `config` folder.
 
-9. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
+9.  Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
 
 10. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
 
@@ -218,80 +234,4 @@ Adjust these parameters according to your simulation requirements. The `output_f
 
 ### Running a Test Case
 
-To ensure that the application is set up correctly, you can run a provided test case located in the `test/` folder. Follow these steps:
-
-Note: Please complete the Installation process, create an appropriate working folder, and then proceed with building the source code using the project.sh script.
-
-1. Open a terminal and navigate to the application directory:
-
-    ```bash
-    cd PixelFlow
-    ```
-
-2. Unzip the cylinder-2d.zip file located in the test folder and move it to cylinder-2d/.:
-
-    ```bash
-    unzip test/cylinder-2d.zip
-    cd cylinder-2d
-    ```
-
-3. Run the simulation script:
-
-   ```bash
-   sh run.sh
-   ```
-
-   You will be prompted to select an executable file, so please choose either ibm2_drag_omp or ibm2_omp.Please enter the number of OpenMP parallel threads.
-
-   ```bash
-   Available executable files:
-   0: ibm2_drag_omp
-   1: ibm2_omp
-   2: ibm3_air_condition_omp
-   3: ibm3_omp
-   Enter the number of the executable file to run: 1
-   Enter the number of threads to use for execution:3
-   Running ibm2_omp...
-   ```
-
-   The processes are output to runlog_*.txt files inside the logs folder.
-   Additionally, execution information is output to process.txt inside the logs folder.
-
-4. Monitor the progress in the `logs/` directory and check for successful execution in the `{output_folder}/` directory.
-5. Upon successful completion of the 2D test case, your directory structure should resemble the following:
-
-   ```plaintext
-   .
-   ├── config
-   │   └── controlDict.txt
-   ├── cylinder
-   │   └── output_paraview.vtk
-   ├── data
-   │   └── porosity_cylinder.csv
-   ├── doc
-   │   ├── fig
-   │   │   └── test-cylinder.png
-   │   └── info.md
-   ├── etc
-   │   ├── divergent.dat
-   │   ├── grid.dat
-   │   ├── solution_uvp.dat
-   │   └── surface_profile.dat
-   ├── logs
-   │   ├── process.txt
-   │   └── runlog_2024.02.25-23.46.31.txt
-   ├── quit.sh
-   └── run.sh
-   ```
-
-6. To confirm the successful execution of the 2D test case, follow these steps:
-
-   1. Locate the `output_paraview.vtk` file in the `cylinder` directory.
-
-   2. Open the file using visualization software such as Paraview.
-
-      - If you can visualize the results in Paraview without any issues, it indicates the completion of the test case execution.
-
-   Congratulations! You have successfully completed the 2D test case. If you encounter any difficulties or have further questions, please refer to the provided documentation or seek assistance from our support channels.
-
-   Thank you for your efforts!
+- [2D circler cylinder case](doc/test-case/cylinder-2d)
