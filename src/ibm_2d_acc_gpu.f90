@@ -1378,8 +1378,8 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, inlet_velocity, ou
   !$omp & shared(div, u, v, xp, yp, m, n) &
   !$omp & default(none)
   !$omp do
-  do i = 1, m
   do j = 1, n
+  do i = 1, m
   div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(j+1)-xp(j-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
   end do
   end do
@@ -1406,6 +1406,7 @@ subroutine  output_paraview (p, u, v, porosity, xp, yp, m, n, inlet_velocity, ou
 
   !! dimless_velocity
   write(50,"('SCALARS abs_dimless_v float')")
+  write(65,"('LOOKUP_TABLE default')")
   do j=1,n
   do i=1,m
   write(50,"(3(f16.4,1x))") sqrt((u(i,j)*porosity(i,j)/inlet_velocity)**2+(v(i,j)*porosity(i,j)/inlet_velocity)**2)
@@ -1498,8 +1499,8 @@ subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, inlet_velocit
   !$omp & shared(div, u, v, xp, yp, m, n) &
   !$omp & default(none)
   !$omp do
-  do i = 1, m
   do j = 1, n
+  do i = 1, m
   div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(j+1)-xp(j-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
   end do
   end do
@@ -1526,6 +1527,7 @@ subroutine  output_paraview_temp (p, u, v, porosity, xp, yp, m, n, inlet_velocit
 
   !! dimless_velocity
   write(65,"('SCALARS abs_dimless_v float')")
+  write(65,"('LOOKUP_TABLE default')")
   do j=1,n
   do i=1,m
   write(65,"(3(f16.4,1x))") sqrt((u(i,j)*porosity(i,j)/inlet_velocity)**2+(v(i,j)*porosity(i,j)/inlet_velocity)**2)
