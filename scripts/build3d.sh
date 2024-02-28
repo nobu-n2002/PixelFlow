@@ -40,8 +40,8 @@ FC_FLAG='-O3 -fopenmp -fno-automatic -o'
 EXE1=ibm3_omp
 EXE2=ibm3_air_condition_omp
 
-echo rm -f *.o *.mod *.exe *.out ${EXE1} ${EXE2}
-rm -f *.o *.mod *.exe *.out ${EXE1}  ${EXE2}
+echo rm -f *.o *.mod *.out ${EXE1} ${EXE2} ${EXE1}.exe ${EXE2}.exe
+rm -f *.o *.mod *.out ${EXE1} ${EXE2} ${EXE1}.exe ${EXE2}.exe
 
 # Check if GNU compiler is available
 if [ -x "$(command -v gfortran)" ]; then
@@ -74,8 +74,8 @@ FC_FLAG='-O3 -acc=gpu -gpu=ccall -Minfo=accel -o'
 EXE1=ibm3_acc
 EXE2=ibm3_air_condition_acc
 
-echo rm -f *.o *.mod *.exe *.out ${EXE1} ${EXE2}
-rm -f *.o *.mod *.exe *.out ${EXE1}  ${EXE2}
+echo rm -f *.o *.mod *.out ${EXE1} ${EXE2} ${EXE1}.exe ${EXE2}.exe
+rm -f *.o *.mod *.out ${EXE1} ${EXE2} ${EXE1}.exe ${EXE2}.exe
 
 # Check if GPU devices are available
 if [ -x "$(command -v nvidia-smi)" ]; then

@@ -115,7 +115,7 @@ For comprehensive insights into the proposed methodology and findings presented 
 
    - Confirm that the `controlDict.txt` file is present in the `config` folder.
 
-9.  Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
+9. Follow the steps in the [Getting Started](#getting-started) section to set up the environment and configure the simulation.
 
 10. Proceed to the [Running Simulations](#running-simulations) section to execute the simulation.
 
