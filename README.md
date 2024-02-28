@@ -12,12 +12,12 @@ For comprehensive insights into the proposed methodology and findings presented 
 
 ```bibtex
 @article{Oshima_2023_MEJ,
-  title={A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation)},
+  title={A novel approach for wall-boundary immersed flow simulation},
   author={Nobuyuki OSHIMA},
   journal={Journal of Fluid Science and Technology},
   volume={18},
   number={4},
-  pages={JFST0034},
+  pages={23-00192},
   year={2023},
   doi={10.1299/jfst.2023jfst0034}
 }
