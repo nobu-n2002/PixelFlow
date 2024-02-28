@@ -16,20 +16,20 @@
 #   This script builds sorce code and creates a new work directory.                 #
 # _________________________________________________________________________________ #
 
-echo "\e[1;32m"
-echo "           _|                      _|      _|_|  _|                                "
-echo " _|_|_|        _|    _|    _|_|    _|    _|      _|    _|_|    _|      _|      _|  "
-echo " _|    _|  _|    _|_|    _|_|_|_|  _|  _|_|_|_|  _|  _|    _|  _|      _|      _|  "
-echo " _|    _|  _|  _|    _|  _|        _|    _|      _|  _|    _|    _|  _|  _|  _|    "
-echo " _|_|_|    _|  _|    _|    _|_|_|  _|    _|      _|    _|_|        _|      _|      "
-echo " _|                                                                                "
-echo " _|                                                                                "
-echo "                                                                                   "
-echo " Author: Nobuto NAKAMICHI, Younghwa CHO, Nobuyuki OSHIMA                           "
-echo " Date: 25.02.2024                                                                  "
-echo " Description:                                                                      "
-echo "   This script builds sorce code and creates a new work directory.                 "
-echo "\e[0m"
+printf "\e[1;32m                                                                           \\n"
+printf "           _|                      _|      _|_|  _|                                \\n"
+printf " _|_|_|        _|    _|    _|_|    _|    _|      _|    _|_|    _|      _|      _|  \\n"
+printf " _|    _|  _|    _|_|    _|_|_|_|  _|  _|_|_|_|  _|  _|    _|  _|      _|      _|  \\n"
+printf " _|    _|  _|  _|    _|  _|        _|    _|      _|  _|    _|    _|  _|  _|  _|    \\n"
+printf " _|_|_|    _|  _|    _|    _|_|_|  _|    _|      _|    _|_|        _|      _|      \\n"
+printf " _|                                                                                \\n"
+printf " _|                                                                                \\n"
+printf "                                                                                   \\n"
+printf " Author: Nobuto NAKAMICHI, Younghwa CHO, Nobuyuki OSHIMA                           \\n"
+printf " Date: 25.02.2024                                                                  \\n"
+printf " Description:                                                                      \\n"
+printf "   This script builds sorce code and creates a new work directory.                 \\n"
+printf "\e[0m                                                                              \\n"
 
 # Function to kill spinner process
 cleanup() {

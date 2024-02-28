@@ -16,21 +16,6 @@
 #   This script builds 2d incompressible flow simulation code.                      #
 # _________________________________________________________________________________ #
 
-# Function to kill spinner process
-cleanup() {
-    echo ""
-    echo "Termination signal was sent."
-    echo "Forcing termination of the build."
-    kill $spinner_pid >/dev/null 2>&1
-    echo ""
-    exit 1
-}
-
-# Trap Ctrl+C and clean up
-trap cleanup 2
-
-sleep 2
-
 # Start the project build
 echo ""
 echo "Making 2d project..."
@@ -42,25 +27,6 @@ BIN_DIR=bin
 # echo cd ${BIN_DIR}
 mkdir -p ${BIN_DIR}
 cd ${BIN_DIR}
-
-# Start spinner animation in background
-(
-    while true; do
-        printf " / "
-        sleep 0.1
-        printf "\b\b\b"
-        printf " - "
-        sleep 0.1
-        printf "\b\b\b"
-        printf " \\ "
-        sleep 0.1
-        printf "\b\b\b"
-        printf " | "
-        sleep 0.1
-        printf "\b\b\b"
-    done
-) &
-spinner_pid=$!
 
 # ===============================================================
 # build 2d program (openMP parallel code for CPU device)
@@ -83,22 +49,18 @@ if [ -x "$(command -v gfortran)" ]; then
     if ${FC} ${FC_FLAG} ${EXE1} ../${SRC_DIR}/${SRC1}; then
         echo "--- Build complete. Executable: bin/${EXE1}"
     else
-        echo "\e[1;31mError:\e[0m Build failed."
+        printf "\e[1;31mError:\e[0m Build failed.\\n"
     fi
     echo ""
     echo ${FC} ${FC_FLAG} ${EXE2} ../${SRC_DIR}/${SRC2}
     if ${FC} ${FC_FLAG} ${EXE2} ../${SRC_DIR}/${SRC2}; then
         echo "--- Build complete. Executable: bin/${EXE2}"
     else
-        echo "\e[1;31mError:\e[0m Build failed."
+        printf "\e[1;31mError:\e[0m Build failed.\\n"
     fi
 else
-    echo "\e[1;35mWarning:\e[0m gfortran is not installed. If you want to use GPU-accelerated compilation, please download nvfortran."
-    
+    printf "\e[1;35mWarning:\e[0m gfortran is not installed. If you want to use GPU-accelerated compilation, please download nvfortran.\\n"
 fi
-
-# Stop spinner animation
-kill $spinner_pid >/dev/null 2>&1
 
 # ===============================================================
 # build 2d program (openACC parallel code for GPU device)
@@ -125,24 +87,20 @@ if [ -x "$(command -v nvidia-smi)" ]; then
         if ${FC} ${FC_FLAG} ${EXE1} ../${SRC_DIR}/${SRC1}; then
             echo "Build complete. Executable: bin/${EXE1}"
         else
-            echo "\e[1;31mError:\e[0m Build failed."
+            printf "\e[1;31mError:\e[0m Build failed.\\n"
         fi
         echo ${FC} ${FC_FLAG} ${EXE2} ../${SRC_DIR}/${SRC2}
         if ${FC} ${FC_FLAG} ${EXE2} ../${SRC_DIR}/${SRC2}; then
             echo "Build complete. Executable: bin/${EXE2}"
         else
-            echo "\e[1;31mError:\e[0m Build failed."
+            printf "\e[1;31mError:\e[0m Build failed.\\n"
         fi
     else
-        echo "\e[1;35mWarning:\e[0m nvfortran is not installed. If you want to use GPU-accelerated compilation, please download nvfortran."
+        printf "\e[1;35mWarning:\e[0m nvfortran is not installed. If you want to use GPU-accelerated compilation, please download nvfortran.\\n"
     fi
 else
-    echo "\e[1;35mWarning:\e[0m No GPU devices available. Unable to compile GPU-accelerated code."
-    
+    printf "\e[1;35mWarning:\e[0m No GPU devices available. Unable to compile GPU-accelerated code.\\n"
 fi
-
-# Stop spinner animation
-kill $spinner_pid >/dev/null 2>&1
 
 # go to PixelFlow/
 cd ..
