@@ -68,7 +68,7 @@ fi
 echo ""
 echo 'Build 3d program (openACC parallel code for GPU device)'
 SRC1=ibm_3d_acc_gpu.f90
-SRC2=ibm_3d_drag_acc_gput.f90
+SRC2=ibm_3d_air_condition_acc_gpu.f90
 FC=nvfortran
 FC_FLAG='-O3 -acc=gpu -gpu=ccall -Minfo=accel -o'
 EXE1=ibm3_acc
