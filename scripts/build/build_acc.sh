@@ -16,6 +16,7 @@
 
 SRC_DIR=src
 BIN_DIR=bin
+LIB_DIR=${SRC_DIR}/lib
 
 # echo mkdir -p ${BIN_DIR}
 # echo cd ${BIN_DIR}
@@ -28,9 +29,15 @@ cd ${BIN_DIR}
 SRC=main.f90
 EXE=main
 
+# Library and Shared Files
+LIB1=global.f90
+LIB2=utils.f90
+LIB3=output.f90
+
 # compiler flag
 FC=nvfortran
 FC_FLAG='-O3 -acc=gpu -gpu=ccall -Minfo=accel'
+# FC_FLAG_DBG='-Wall'
 
 while getopts ":f:o:" opt; do
   case ${opt} in
@@ -65,16 +72,31 @@ rm -f *.o *.mod *.out ${EXE} ${EXE}.exe
 # Check if GPU devices are available
 if [ -x "$(command -v nvidia-smi)" ]; then
     echo "GPU devices are available."
-    
+
     # Check if nvfortran is installed
     if [ -x "$(command -v nvfortran)" ]; then
         echo "nvfortran is installed. Compiling with nvfortran..."
-        echo ${FC} ${FC_FLAG} -o ${EXE} ../${SRC_DIR}/${SRC}
-        if ${FC} ${FC_FLAG} -o ${EXE} ../${SRC_DIR}/${SRC}; then
-            echo "Build complete. Executable: bin/${EXE}"
-        else
-            printf "\e[1;31mError:\e[0m Build failed.\\n"
-        fi
+
+      # Compiles but does not link
+      echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB1}
+      ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB1}
+      
+      echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB2}
+      ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB2}
+      
+      echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB3}
+      ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB3}
+
+      echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_DIR}/${SRC}
+      ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_DIR}/${SRC}
+      
+      # Link all *.o files in the bin folder
+      echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -o ${EXE} *.o
+      if ${FC} ${FC_FLAG} ${FC_FLAG_DBG} *.o -o ${EXE} ; then
+          echo "Build complete. Executable: bin/${EXE}"
+      else
+          printf "\e[1;31mError:\e[0m Build failed.\\n"
+      fi
     else
         printf "\e[1;35mWarning:\e[0m nvfortran is not installed. If you want to use GPU-accelerated compilation, please download nvfortran.\\n"
     fi

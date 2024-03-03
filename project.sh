@@ -30,6 +30,7 @@ done
 if [ "$run_build" = true ]; then
     # Run buildAll.sh script
     sh scripts/etc/logo.sh
+    sleep 2
     sh scripts/build/buildAll.sh
 fi
 

@@ -196,7 +196,7 @@ The `config/controlDict.txt` file contains parameters that define the properties
 ### &physical Section
 
 - **`xnue`**: Kinematic viscosity of the fluid in [m^2/s].
-- **`xlamda`**: Second Kinematic viscosity of the fluid in[m^2/s].
+- **`xlambda`**: Second Kinematic viscosity of the fluid in[m^2/s].
 - **`density`**: Density of the fluid in [kg/m^3].
 - **`width`**, **`height`**, **`depth`**: The simulation domain in [m].
 - **`time`**: Total simulation time in [s].

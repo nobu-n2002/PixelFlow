@@ -16,6 +16,7 @@
 
 SRC_DIR=src
 BIN_DIR=bin
+LIB_DIR=${SRC_DIR}/lib
 
 # echo mkdir -p ${BIN_DIR}
 # echo cd ${BIN_DIR}
@@ -26,9 +27,15 @@ cd ${BIN_DIR}
 SRC=main.f90
 EXE=main
 
+# Library and Shared Files
+LIB1=global.f90
+LIB2=utils.f90
+LIB3=output.f90
+
 # compiler flag
 FC=gfortran
 FC_FLAG='-O3 -fopenmp -fno-automatic'
+# FC_FLAG_DBG='-Wall'
 
 while getopts ":f:o:" opt; do
   case ${opt} in
@@ -63,8 +70,23 @@ rm -f *.o *.mod *.out ${EXE} ${EXE}.exe
 # Check if GNU compiler is available
 if [ -x "$(command -v gfortran)" ]; then
     echo "--- gfortran is installed. Compiling with gfortran..."
-    echo ${FC} ${FC_FLAG} ../${SRC_DIR}/${SRC} -o ${EXE} 
-    if ${FC} ${FC_FLAG} ../${SRC_DIR}/${SRC} -o ${EXE}; then
+
+    # Compiles but does not link
+    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB1}
+    ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB1}
+    
+    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB2}
+    ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB2}
+    
+    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB3}
+    ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB3}
+
+    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_DIR}/${SRC}
+    ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_DIR}/${SRC}
+    
+    # Link all *.o files in the bin folder
+    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -o ${EXE} *.o
+    if ${FC} ${FC_FLAG} ${FC_FLAG_DBG} *.o -o ${EXE} ; then
         echo "--- Build complete. Executable: bin/${EXE}"
     else
         printf "\e[1;31mError:\e[0m Build failed.\\n"
