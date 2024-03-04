@@ -40,14 +40,14 @@ To ensure that the application is set up correctly, you can run a provided test 
    sh run.sh
    ```
 
-   You will be prompted to select an executable file, so please choose either ibm2_drag_omp or ibm2_omp.Please enter the number of OpenMP parallel threads.
+   You will be prompted to select an executable file, so please choose either ibm2_drag_omp or ibm2_uniform_omp. Then enter the number of OpenMP parallel threads.
 
-   ```bash
+   ```text
    Available executable files:
    0: ibm2_drag_omp
-   1: ibm2_omp
+   1: ibm2_uniform_omp
    2: ibm3_air_condition_omp
-   3: ibm3_omp
+   3: ibm3_uniform_omp
    Enter the number of the executable file to run: 1
    Enter the number of threads to use for execution:3
    Running ibm2_omp...
