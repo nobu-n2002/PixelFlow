@@ -1,5 +1,4 @@
-bin/**/*.o
-bin/**/*.mod
+bin/**/*
 
 src/lib/*.mod
 src/*.mod
