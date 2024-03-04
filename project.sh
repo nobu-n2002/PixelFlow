@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Function to display script usage
 display_usage() {
     echo "Usage: $0 [OPTIONS] <folder_name>"
@@ -28,14 +26,18 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
+sh scripts/etc/logo.sh
+
 # Check if both -b and -f options are provided
 if [ "$run_build" = true ]; then
     # Run buildAll.sh script
-    sh scripts/buildAll.sh
+    sleep 2
+    sh scripts/build/buildAll.sh
 fi
 
 # Check if -f option is provided
 if [ "$create_folder" = true ]; then
+
     # Create the folder
     mkdir -p "$folder_name"
 
@@ -53,8 +55,8 @@ if [ "$create_folder" = true ]; then
     echo "mkdir -p data config"
     mkdir -p data config
 
-    echo "../scripts/control.sh"
-    sh ../scripts/control.sh
+    echo "../scripts/build/control.sh"
+    sh ../scripts/build/control.sh
 
     echo ""
     echo "Project $folder_name was completed to build."

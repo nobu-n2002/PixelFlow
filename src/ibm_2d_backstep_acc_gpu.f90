@@ -282,17 +282,18 @@ subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlambda, density, he
 
   call boundrary_matrix (p, ap, ae, aw, an, as, bb, m, n, height, yp)
 
-  call solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
+  call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
   ! ----------------
   return
 end subroutine solve_p
 !******************
-  
+
+
 !******************
-! OpenMP Parallelized
-! Written only for CPU machine
-! No efficiency ensured on GPU machine
-subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
+! OpenACC Parallelized
+! Written only for GPU machine
+! No efficiency ensured on CPU machine
+subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n, relux_factor, iter_max)
   use global_2d  
   implicit none
   real,intent(inout),dimension(0:md,0:nd)::p
@@ -306,38 +307,39 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor,
   real,dimension(0:md, 0:nd)::p_old
   integer::i, j, iter, k
 
-  !$omp parallel private(iter, i, j, k) &
-  !$omp & shared(iter_max, relux_factor, m, n) &
-  !$omp & shared(error, p_old, p, ap, ae, aw, an, as, bb) &
-  !$omp & default(none)
-
   ! ----------------
   !   SOR algorithm
   ! ----------------
-  !$omp single
-  error = 0.0
-  !$omp end single
+
+  !$acc data copy(p) &
+  !$acc & copyin(ap, ae, aw, an, as, bb, relux_factor) &
+  !$acc & create(p_old, error)
 
   do iter = 1, iter_max
+    ! write(*,*)'CHECK iteration no. ',iter, ' / iter_max', iter_max
 
     ! default periodic condition in y-direction
-    !$omp do
+    !$acc kernels
+    !$acc loop independent
     do i = 1, m
       p(i, 0) = p(i, n)
       p(i, n+1) = p(i, 1)
     end do
-    !$omp end do
+    !$acc end kernels
 
-    !$omp do
+    !$acc kernels
+    !$acc loop independent
     do i = 0, m+1
+    !$acc loop independent
       do j = 0, n+1
         p_old(i, j) = p(i, j)
       end do
     end do
-    !$omp end do
+    !$acc end kernels
 
     !-- EVEN SPACE process
-    !$omp do reduction(max: error)
+    !$acc kernels
+    !$acc loop independent
     do k = 2, m*n, 2    ! even space
       j = (k - 1) / m + 1
       i = k - (j - 1) * m
@@ -345,33 +347,36 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor,
       !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
       if(mod(m,2)==0 .and. mod(j,2)==0) i = i - 1
 
-      p(i, j) = ( bb(i, j)					                                       &
+      p(i, j) = ( bb(i, j)					                                      &
                 - ae(i, j) * p_old(i+1, j) - aw(i, j) * p_old(i-1, j)    &
                 - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
                 / ap(i, j) * relux_factor                                 &
               + p_old(i, j) * (1. - relux_factor)
-      error = max(error, abs(p(i,j)-p_old(i,j)))
     end do
-    !$omp end do
+    !$acc end kernels
 
     ! default periodic condition in y-direction
-    !$omp do
+    !$acc kernels
+    !$acc loop independent
     do i = 1, m
       p(i, 0)  = p(i, n)
       p(i, n+1) = p(i, 1)
     end do
-    !$omp end do
+    !$acc end kernels
 
-    !$omp do
+    !$acc kernels
+    !$acc loop independent
     do i = 0, m+1
+    !$acc loop independent
       do j = 0, n+1
         p_old(i, j) = p(i, j)
       end do
     end do
-    !$omp end do
+    !$acc end kernels
 
     !-- ODD SPACE process
-    !$omp do reduction(max: error)
+    !$acc kernels
+    !$acc loop independent
     do k = 1, m*n, 2    ! odd space
       j = (k - 1) / m + 1
       i = k - (j - 1) * m
@@ -379,33 +384,39 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor,
       !-- IF m is EVEN (Based on Column-Major Order; FORTRAN)
       if(mod(m,2)==0 .and. mod(j,2)==0) i = i + 1
 
-      p(i, j) = ( bb(i, j)					                                       &
+      p(i, j) = ( bb(i, j)					                                      &
                 - ae(i, j) * p_old(i+1, j) - aw(i, j) * p_old(i-1, j)    &
                 - an(i, j) * p_old(i, j+1) - as(i, j) * p_old(i, j-1) )  &
                 / ap(i, j) * relux_factor                                 &
               + p_old(i, j) * (1. - relux_factor)
-      error = max(error, abs(p(i,j)-p_old(i,j)))
     end do
-  !$omp end do
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop independent reduction(max:error)
+    do i = 1, m
+    !$acc loop independent reduction(max:error)
+      do j = 1, n
+        error = max(error, abs(p(i,j)-p_old(i,j)))
+      end do 
+    end do
   end do
 
   ! default periodic condition in y-direction
-  !$omp do
+  !$acc kernels
+  !$acc loop independent
   do i = 1, m
     p(i, 0)   = p(i, n)
     p(i, n+1) = p(i, 1)
   end do
-  !$omp end do
+  !$acc end kernels
 
-  !$omp master
-  write(*,*) 'SOR iteration no.', iter_max, '-- p error:', error
-  !$omp end master
+  !$acc end data
 
-  !$omp end parallel
+   write(*,*)'SOR iteration no.', iter-1,'  -- error=', error
 
   return
-end subroutine solve_matrix_vec_omp
+end subroutine solve_matrix_vec_oacc
 !******************
 
 ! !******************
@@ -531,8 +542,8 @@ subroutine  boundary(p, u, v, xp, yp, width, height    &
   ! ----------------
   ! inlet (u=inlet_velocity, v=0., dp/dx=0 at i=1)
   do j= 1, n
-  u(1,j) =inlet_velocity*cos(AoA/180.*pai)
-  v(1,j) =inlet_velocity*sin(AoA/180.*pai)
+  u(1,j) =inlet_velocity*cos(AoA/180.*pai)*porosity(1,j)
+  v(1,j) =inlet_velocity*sin(AoA/180.*pai)*porosity(1,j)
   u(0,j) =u(1,j)		! dummy
   v(0,j) =v(1,j)  	! dummy
   p(0,j) =p(2,j)
@@ -721,8 +732,10 @@ subroutine  initial_conditions (p, u, v, xp, yp, width, height  &
   ! ----------------
   do j = 1, n
   do i = 1, m
-  u(i,j)=inlet_velocity*cos(AoA/180*pai)
-  v(i,j)=inlet_velocity*sin(AoA/180*pai)
+  u(i,j)=inlet_velocity*cos(AoA/180*pai)*porosity(i,j)
+  ! u(i,j)=0.0
+  v(i,j)=inlet_velocity*sin(AoA/180*pai)*porosity(i,j)
+  ! v(i,j)=0.0
   p(i,j)=outlet_pressure
   end do
   end do

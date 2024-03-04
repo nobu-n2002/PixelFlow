@@ -11,41 +11,17 @@
 # Author: Nobuto NAKAMICHI, Younghwa CHO, Nobuyuki OSHIMA                           #
 # Date: 25.02.2024                                                                  #
 # Description:                                                                      #
-#   This script checks processes and terminates them.                               #
+#   This script builds sorce code and creates a new work directory.                 #
 # _________________________________________________________________________________ #
 
-# Extract PID from "process.txt" file
-pid=$(grep -oP 'Process PID: \K\d+' logs/process.txt)
+DIR=scripts/build
 
-echo "PROCESS PID :STATUS"
-echo "---------------------"
-for i in $pid
-do
-    # check processes
-    if ps $i > /dev/null; then
-        echo "PID $i :RUN"
-        while true; do
-            # Prompt for user input with a warning message
-            echo -n "--- Are you sure you want to terminate $i? (yes/no): "
-            # Read user input
-            read input
-            case "$input" in
-                [yY]|[yY][eE][sS])
-                    # Terminate the process using the extracted PID
-                    kill $i
-                    echo "Process with PID $i has been terminated."
-                    break
-                    ;;
-                [nN]|[nN][oO])
-                    echo "Terminating canceled."
-                    break
-                    ;;
-                *)
-                    echo "Invalid input. Please enter 'yes' or 'no'."
-                    ;;
-            esac
-        done
-    else
-        echo "PID $i :END"
-    fi
-done
+sh ${DIR}/clean.sh
+sh ${DIR}/build_omp.sh -f ibm_2d_omp_cpu.f90 -o ibm2_omp
+sh ${DIR}/build_omp.sh -f ibm_2d_drag_omp_cpu.f90 -o ibm2_drag_omp
+sh ${DIR}/build_omp.sh -f ibm_3d_omp_cpu.f90 -o ibm3_omp
+sh ${DIR}/build_omp.sh -f ibm_3d_air_condition_omp_cpu.f90 -o ibm3_air_condition_omp
+sh ${DIR}/build_acc.sh -f ibm_2d_acc_gpu.f90 -o ibm2_acc
+sh ${DIR}/build_acc.sh -f ibm_2d_drag_acc_gpu.f90 -o ibm2_drag_acc
+sh ${DIR}/build_acc.sh -f ibm_3d_acc_gpu.f90 -o ibm3_acc
+sh ${DIR}/build_acc.sh -f ibm_3d_air_condition_acc_gpu.f90 -o ibm3_air_condition_acc

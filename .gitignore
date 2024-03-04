@@ -1,0 +1,5 @@
+bin/**/*.o
+bin/**/*.mod
+
+src/lib/*.mod
+src/*.mod
