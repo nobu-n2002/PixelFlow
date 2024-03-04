@@ -38,6 +38,11 @@ fi
 # Check if -f option is provided
 if [ "$create_folder" = true ]; then
 
+    echo ""
+    echo '------------------------------------------'
+    echo 'Making project' ${folder_name} 
+    echo '------------------------------------------'    
+
     # Create the folder
     mkdir -p "$folder_name"
 
