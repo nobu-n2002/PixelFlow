@@ -26,18 +26,17 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
+sh scripts/etc/logo.sh
+
 # Check if both -b and -f options are provided
 if [ "$run_build" = true ]; then
     # Run buildAll.sh script
-    sh scripts/etc/logo.sh
     sleep 2
     sh scripts/build/buildAll.sh
 fi
 
 # Check if -f option is provided
 if [ "$create_folder" = true ]; then
-
-    sh scripts/etc/logo.sh
 
     # Create the folder
     mkdir -p "$folder_name"

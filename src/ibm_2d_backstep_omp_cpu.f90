@@ -408,59 +408,59 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor,
 end subroutine solve_matrix_vec_omp
 !******************
 
-! !******************
-! subroutine  solve_matrix (p, ap, ae, aw, an, as, bb, m, n)
-!   use global_2d
-!   implicit none
-!   real,intent(inout),dimension(0:md,0:nd):: p
-!   real,intent(in),dimension(0:md,0:nd):: ap, ae, aw, an, as, bb
-!   integer,intent(in):: m, n
+!******************
+subroutine  solve_matrix (p, ap, ae, aw, an, as, bb, m, n)
+  use global_2d
+  implicit none
+  real,intent(inout),dimension(0:md,0:nd):: p
+  real,intent(in),dimension(0:md,0:nd):: ap, ae, aw, an, as, bb
+  integer,intent(in):: m, n
 
-!   ! local variables
-!   real:: relux_factor, error
-!   real,dimension(0:md, 0:nd)::p_old
-!   integer::i, j, iter, iter_max
+  ! local variables
+  real:: relux_factor, error
+  real,dimension(0:md, 0:nd)::p_old
+  integer::i, j, iter, iter_max
 
-!   ! ----------------
-!   !   SOR algorithm
-!   ! ----------------
-!   ! iter_max = min(100,max(m,n)) ! SOR max interation steps
-!   iter_max = 50
-!   relux_factor=1.7 ! SOR reluxation factor
+  ! ----------------
+  !   SOR algorithm
+  ! ----------------
+  ! iter_max = min(100,max(m,n)) ! SOR max interation steps
+  iter_max = 50
+  relux_factor=1.7 ! SOR reluxation factor
 
-!   do iter = 1, iter_max
-!   ! write(*,*)'CHECK iteration no.'
-!   ! error=0.
+  do iter = 1, iter_max
+  ! write(*,*)'CHECK iteration no.'
+  ! error=0.
 
-!   ! default periodic condition in y-direction
-!   do i = 1, m
-!   p(i,0)  =p(i,n)
-!   p(i,n+1)=p(i,1)
-!   end do
+  ! default periodic condition in y-direction
+  do i = 1, m
+  p(i,0)  =p(i,n)
+  p(i,n+1)=p(i,1)
+  end do
 
-!   do i = 0, m+1
-!   do j = 0, n+1
-!   p_old(i,j) = p(i,j)
-!   end do
-!   end do
+  do i = 0, m+1
+  do j = 0, n+1
+  p_old(i,j) = p(i,j)
+  end do
+  end do
 
-!   do i = 1, m
-!   do j = 1, n
-!   p(i,j) = (  bb(i,j)					&
-!         - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
-!         - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
-!         /ap(i,j)    * relux_factor			&
-!         + p_old(i,j) * (1.-relux_factor)
-!   end do
-!   end do
+  do i = 1, m
+  do j = 1, n
+  p(i,j) = (  bb(i,j)					&
+        - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
+        - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
+        /ap(i,j)    * relux_factor			&
+        + p_old(i,j) * (1.-relux_factor)
+  end do
+  end do
 
-!   end do
+  end do
 
-!   ! ----------------
+  ! ----------------
 
-!   return
-! end subroutine solve_matrix
-! !******************
+  return
+end subroutine solve_matrix
+!******************
 
 !******************
 subroutine  boundrary_matrix (p, ap, ae, aw, an, as, bb, m, n, height, yp)
@@ -531,8 +531,8 @@ subroutine  boundary(p, u, v, xp, yp, width, height    &
   ! ----------------
   ! inlet (u=inlet_velocity, v=0., dp/dx=0 at i=1)
   do j= 1, n
-  u(1,j) =inlet_velocity*cos(AoA/180.*pai)
-  v(1,j) =inlet_velocity*sin(AoA/180.*pai)
+  u(1,j) =inlet_velocity*cos(AoA/180.*pai)*porosity(1,j)
+  v(1,j) =inlet_velocity*sin(AoA/180.*pai)*porosity(1,j)
   u(0,j) =u(1,j)		! dummy
   v(0,j) =v(1,j)  	! dummy
   p(0,j) =p(2,j)
@@ -721,8 +721,10 @@ subroutine  initial_conditions (p, u, v, xp, yp, width, height  &
   ! ----------------
   do j = 1, n
   do i = 1, m
-  u(i,j)=inlet_velocity*cos(AoA/180*pai)
-  v(i,j)=inlet_velocity*sin(AoA/180*pai)
+  u(i,j)=inlet_velocity*cos(AoA/180*pai)*porosity(i,j)
+  ! u(i,j)=0.0
+  v(i,j)=inlet_velocity*sin(AoA/180*pai)*porosity(i,j)
+  ! v(i,j)=0.0
   p(i,j)=outlet_pressure
   end do
   end do

@@ -8,11 +8,11 @@ module output_2d
     subroutine  output_solution_2d (p, u, v, m, n)
         use global_2d
           implicit none
-          real,intent(in),dimension(0:md,0:nd)::	u, v, p
-          integer,intent(in)::	m, n
+          real,intent(in),dimension(0:md,0:nd)::u, v, p
+          integer,intent(in)::m, n
       
         ! local variables
-        integer::	i, j
+        integer::i, j
       
         ! ----------------
         write(*,*)
@@ -42,12 +42,12 @@ module output_2d
     subroutine  output_grid_2d (xp, yp, m, n)
         use global_2d
         implicit none
-        real,intent(in),dimension(0:md)::	xp
-        real,intent(in),dimension(0:nd)::	yp
-        integer,intent(in)::	m, n
+        real,intent(in),dimension(0:md)::xp
+        real,intent(in),dimension(0:nd)::yp
+        integer,intent(in)::m, n
       
         ! local variables
-        integer::	i, j
+        integer::i, j
       
         open (60, file='etc/grid.dat', status='replace')
         ! ----------------
@@ -63,15 +63,15 @@ module output_2d
     subroutine  output_grid_list_2d (xp, yp, m, n, angle_of_attack)
         use global_2d
         implicit none
-        real,intent(in),dimension(0:md)::	xp
-        real,intent(in),dimension(0:nd)::	yp
-        integer,intent(in)::	m, n
-        real,intent(in):: angle_of_attack
+        real,intent(in),dimension(0:md)::xp
+        real,intent(in),dimension(0:nd)::yp
+        integer,intent(in)::m, n
+        real,intent(in)::angle_of_attack
       
         ! local variables
-        integer::	i, j
-        real::      z=0.0, pai=atan(1.)*4.
-        real::      x, y, th
+        integer::i, j
+        real, parameter::z=0.0, pai=atan(1.)*4.
+        real::x, y, th
       
         open (60, file='etc/cellcenter.dat', status='replace')
         ! ----------------
@@ -202,14 +202,14 @@ module output_2d
     subroutine  output_divergent_2d (p, u, v, porosity, dx, dy, m, n)
         use global_2d
         implicit none
-        real,intent(in),dimension(0:md,0:nd)::	u, v, p
-        real,intent(in),dimension(0:md,0:nd)::	porosity
-        real,intent(in)::	dx, dy
-        integer,intent(in)::	m, n
+        real,intent(in),dimension(0:md,0:nd)::u, v, p
+        real,intent(in),dimension(0:md,0:nd)::porosity
+        real,intent(in)::dx, dy
+        integer,intent(in)::m, n
       
         ! local variables
-        integer::	i, j
-        real,dimension(0:md,0:nd)::	div
+        integer::i, j
+        real,dimension(0:md,0:nd)::div
       
         open (63, file='etc/divergent.dat', status='replace')
         ! ----------------
@@ -364,6 +364,14 @@ module output_2d
         enddo
         enddo
       
+        !! porosity
+        write(50,"('SCALARS porosity float')")
+        write(50,"('LOOKUP_TABLE default')")
+        do j=1,n
+        do i=1,m
+        write(50,"(3(f16.4,1x))") porosity(i,j)
+        enddo
+        enddo      
       
         !! pressure
         write(50,"('SCALARS pressure float')")
@@ -380,7 +388,7 @@ module output_2d
         !$omp do
         do j = 1, n
         do i = 1, m
-        div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(j+1)-xp(j-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
+        div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(i+1)-xp(i-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
         end do
         end do
         !$omp end do
@@ -392,15 +400,6 @@ module output_2d
         do j=1,n
         do i=1,m
         write(50,"(3(f16.4,1x))") div(i,j)
-        enddo
-        enddo
-      
-        !! porosity
-        write(50,"('SCALARS porosity float')")
-        write(50,"('LOOKUP_TABLE default')")
-        do j=1,n
-        do i=1,m
-        write(50,"(3(f16.4,1x))") porosity(i,j)
         enddo
         enddo
       
@@ -483,7 +482,15 @@ module output_2d
         enddo
         enddo
       
-      
+        !! porosity
+        write(65,"('SCALARS porosity float')")
+        write(65,"('LOOKUP_TABLE default')")
+        do j=1,n
+        do i=1,m
+        write(65,"(3(f16.4,1x))") porosity(i,j)
+        enddo
+        enddo
+
         !! pressure
         write(65,"('SCALARS pressure float')")
         write(65,"('LOOKUP_TABLE default')")
@@ -499,7 +506,7 @@ module output_2d
         !$omp do
         do j = 1, n
         do i = 1, m
-        div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(j+1)-xp(j-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
+        div(i,j)= (u(i+1,j)-u(i-1,j))/(xp(i+1)-xp(i-1))+(v(i,j+1)-v(i,j-1))/(yp(j+1)-yp(j-1))
         end do
         end do
         !$omp end do
@@ -511,15 +518,6 @@ module output_2d
         do j=1,n
         do i=1,m
         write(65,"(3(f16.4,1x))") div(i,j)
-        enddo
-        enddo
-      
-        !! porosity
-        write(65,"('SCALARS porosity float')")
-        write(65,"('LOOKUP_TABLE default')")
-        do j=1,n
-        do i=1,m
-        write(65,"(3(f16.4,1x))") porosity(i,j)
         enddo
         enddo
       
@@ -1034,7 +1032,18 @@ module output_3d
             enddo
             enddo
         enddo
-            
+
+        !-- porosity
+        write(65,"('SCALARS porosity float')")
+        write(65,"('LOOKUP_TABLE default')")
+        do k = 1, l
+            do j = 1, n
+            do i = 1, m
+                write(65,"(3(f16.4,1x))") porosity(i,j,k)
+            end do
+            end do
+        end do
+
         !-- pressure
         write(65,"('SCALARS pressure float')")
         write(65,"('LOOKUP_TABLE default')")
@@ -1069,17 +1078,6 @@ module output_3d
             do j = 1, n
             do i = 1, m
                 write(65,"(3(f16.4,1x))") div(i,j,k)
-            end do
-            end do
-        end do
-
-        !-- porosity
-        write(65,"('SCALARS porosity float')")
-        write(65,"('LOOKUP_TABLE default')")
-        do k = 1, l
-            do j = 1, n
-            do i = 1, m
-                write(65,"(3(f16.4,1x))") porosity(i,j,k)
             end do
             end do
         end do

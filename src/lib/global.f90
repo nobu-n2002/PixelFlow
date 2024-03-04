@@ -9,7 +9,7 @@ end module global_2d
 module global_3d
     implicit none
     !--- md, nd, ld > grid size (m,n,l)
-    integer, parameter:: md = 256, nd = 256, ld = 256
+    integer, parameter:: md = 256, nd = 180, ld = 80
 end module global_3d
 
 module valiables
