@@ -1,4 +1,7 @@
-bin/**/*
+bin/*
+
+build/*
 
 src/lib/*.mod
-src/*.mod
+src/omp_parallel/*.mod
+src/oacc_parallel/*.mod

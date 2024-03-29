@@ -32,7 +32,7 @@ sh scripts/etc/logo.sh
 if [ "$run_build" = true ]; then
     # Run buildAll.sh script
     sleep 2
-    sh scripts/build/buildAll.sh
+    sh scripts/build/build.sh
 fi
 
 # Check if -f option is provided
