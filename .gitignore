@@ -2,7 +2,8 @@
 bin/
 
 # library files
-lib/
+lib/*.a
+lib/modules/
 
 # build files
 build/

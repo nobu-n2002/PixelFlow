@@ -14,7 +14,6 @@ SCRIPTS_DIR := scripts
 BUILD_DIR := build 
 PROJECT_DIR := projects
 f := my_projects
-TEST_2D_DIR := test-2d
 
 # Function to display usage
 usage:
