@@ -17,12 +17,12 @@ f := my_projects
 TEST_2D_DIR := test-2d
 
 # Function to display usage
-display_usage:
+usage:
 	@echo "Usage: make [OPTIONS]"
 	@echo "options:"
-	@echo "  build       Build all source codes"
-	@echo "  project     Create a new folder with the specified name"
-	@echo "  help        Display Usage"
+	@echo "  build				Build all source codes"
+	@echo "  project f=<folder_name>	Create a new folder with the specified name"
+	@echo "  help				Display Usage"
 	@exit 0
 
 clean:
