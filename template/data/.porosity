@@ -1,0 +1,3 @@
+DIMENSION_X, DIMENSION_Y, DIMENSION_Z
+index_x0, index_y0, index_z0, porosity_value0
+index_x1, index_y1, index_z1, porosity_value1

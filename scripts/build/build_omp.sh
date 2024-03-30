@@ -15,6 +15,7 @@
 # _________________________________________________________________________________ #
 
 SRC_DIR=src
+SRC_OMP_DIR=${SRC_DIR}/omp_parallel
 BIN_DIR=bin
 LIB_DIR=${SRC_DIR}/lib
 
@@ -24,7 +25,7 @@ mkdir -p ${BIN_DIR}
 cd ${BIN_DIR}
 
 # default (dummy)
-SRC=main.f90
+SRC=omp_parallel/main.f90
 EXE=main
 
 # Library and Shared Files
@@ -34,7 +35,7 @@ LIB3=output.f90
 
 # compiler flag
 FC=gfortran
-FC_FLAG='-O3 -fopenmp -fno-automatic'
+FC_FLAG='-O3 -fopenmp -fno-automatic -mcmodel=medium'
 # FC_FLAG_DBG='-Wall'
 
 while getopts ":f:o:" opt; do
@@ -81,8 +82,8 @@ if [ -x "$(command -v gfortran)" ]; then
     echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB3}
     ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${LIB_DIR}/${LIB3}
 
-    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_DIR}/${SRC}
-    ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_DIR}/${SRC}
+    echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_OMP_DIR}/${SRC}
+    ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -c ../${SRC_OMP_DIR}/${SRC}
     
     # Link all *.o files in the bin folder
     echo ${FC} ${FC_FLAG} ${FC_FLAG_DBG} -o ${EXE} *.o

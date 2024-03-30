@@ -1,7 +1,18 @@
-bin/*
+# executable files
+bin/
 
-build/*
+# library files
+lib/
 
+# build files
+build/
+
+# module files
 src/lib/*.mod
 src/omp_parallel/*.mod
 src/oacc_parallel/*.mod
+src/solver/*.mod
+src/beta/*.mod
+
+# projects
+projects/

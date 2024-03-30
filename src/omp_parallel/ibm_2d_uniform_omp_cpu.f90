@@ -408,60 +408,6 @@ subroutine  solve_matrix_vec_omp (p, ap, ae, aw, an, as, bb, m, n, relux_factor,
 end subroutine solve_matrix_vec_omp
 !******************
 
-! !******************
-! subroutine  solve_matrix (p, ap, ae, aw, an, as, bb, m, n)
-!   use global_2d
-!   implicit none
-!   real,intent(inout),dimension(0:md,0:nd):: p
-!   real,intent(in),dimension(0:md,0:nd):: ap, ae, aw, an, as, bb
-!   integer,intent(in):: m, n
-
-!   ! local variables
-!   real:: relux_factor, error
-!   real,dimension(0:md, 0:nd)::p_old
-!   integer::i, j, iter, iter_max
-
-!   ! ----------------
-!   !   SOR algorithm
-!   ! ----------------
-!   ! iter_max = min(100,max(m,n)) ! SOR max interation steps
-!   iter_max = 50
-!   relux_factor=1.7 ! SOR reluxation factor
-
-!   do iter = 1, iter_max
-!   ! write(*,*)'CHECK iteration no.'
-!   ! error=0.
-
-!   ! default periodic condition in y-direction
-!   do i = 1, m
-!   p(i,0)  =p(i,n)
-!   p(i,n+1)=p(i,1)
-!   end do
-
-!   do i = 0, m+1
-!   do j = 0, n+1
-!   p_old(i,j) = p(i,j)
-!   end do
-!   end do
-
-!   do i = 1, m
-!   do j = 1, n
-!   p(i,j) = (  bb(i,j)					&
-!         - ae(i,j)*p_old(i+1,j) -aw(i,j)*p(i-1,j)	&
-!         - an(i,j)*p_old(i,j+1) -as(i,j)*p(i,j-1) )	&
-!         /ap(i,j)    * relux_factor			&
-!         + p_old(i,j) * (1.-relux_factor)
-!   end do
-!   end do
-
-!   end do
-
-!   ! ----------------
-
-!   return
-! end subroutine solve_matrix
-! !******************
-
 !******************
 subroutine  boundrary_matrix (p, ap, ae, aw, an, as, bb, m, n, height, yp)
   use global_2d
