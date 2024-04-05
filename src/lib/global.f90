@@ -3,7 +3,7 @@
 module global_2d
     implicit none
     !--- md, nd > grid size (m,n)
-    integer, parameter:: md = 4500, nd = 4500
+    integer, parameter:: md = 1500, nd = 1500
 end module global_2d
 
 module global_3d

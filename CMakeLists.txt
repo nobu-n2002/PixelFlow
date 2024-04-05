@@ -29,6 +29,7 @@ if(with_openmp)
         message(STATUS "OpenMP found")
         # Build source file with omp
         add_subdirectory(src/omp_parallel)
+        add_subdirectory(src/test)
     else()
         message(FATAL_ERROR "OpenMP not found")
     endif()
