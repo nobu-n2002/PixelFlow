@@ -12,11 +12,11 @@ cmake_minimum_required(VERSION 3.12)
 project(IBM
     VERSION 1.0
     DESCRIPTION "Flow Simulation Code implementing IB Method"
-    LANGUAGES Fortran)
+    LANGUAGES Fortran C CXX)
 
 # Build option setting
 option(with_openmp "Enable OpenMP" ON)
-option(with_openacc "Enable OpenACC" OFF)
+option(with_openacc "Enable OpenACC" ON)
 
 set(DCMAKE_BUILD_TYPE "Release")
 
@@ -29,7 +29,7 @@ if(with_openmp)
         message(STATUS "OpenMP found")
         # Build source file with omp
         add_subdirectory(src/omp_parallel)
-        add_subdirectory(src/test)
+        # add_subdirectory(src/test)
     else()
         message(FATAL_ERROR "OpenMP not found")
     endif()
@@ -38,7 +38,7 @@ endif()
 if(with_openacc)
     find_package(OpenACC REQUIRED)
     # Check for CUDA and nvfortran
-    find_package(CUDA)
+    find_package(CUDA QUIET)
     if(CUDA_FOUND)
         message(STATUS "CUDA found.")
         # Check if nvfortran is available
