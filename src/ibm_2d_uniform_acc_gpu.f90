@@ -399,6 +399,7 @@ subroutine  solve_matrix_vec_oacc (p, ap, ae, aw, an, as, bb, m, n, relux_factor
         error = max(error, abs(p(i,j)-p_old(i,j)))
       end do 
     end do
+    !$acc end kernels
   end do
 
   ! default periodic condition in y-direction
