@@ -187,10 +187,10 @@ def view_contour_all(array, output_folder, filename, isovalue):
 
 
 def create_tanh_kernel(thickness=2.0):
-    size=int(thickness*4) + (1-int(thickness*4)%2)
-    x = np.linspace(-size/2, size/2, size)
-    y = np.linspace(-size/2, size/2, size)
-    z = np.linspace(-size/2, size/2, size)
+    ksize=int(thickness*14)
+    x = np.linspace(-ksize, ksize, int(2*ksize+1))
+    y = np.linspace(-ksize, ksize, int(2*ksize+1))
+    z = np.linspace(-ksize, ksize, int(2*ksize+1))
     x, y, z = np.meshgrid(x, y, z)
     kernel = 1 - np.tanh((np.sqrt(x**2 + y**2 + z**2))/ thickness)
     kernel /= kernel.sum()
