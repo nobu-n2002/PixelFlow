@@ -17,9 +17,11 @@ def create_voxel_data(size, radius):
 
     return data
 
+
 def save_bitmap(data, output_path):
     img = Image.fromarray(data, 'L')
     img.save(output_path)
+
 
 def main():
     voxel_size = 32
@@ -39,6 +41,7 @@ def main():
         output_path = f"{output_folder}/img_{i:05d}.bmp"
         save_bitmap(voxel_data[i, :, :], output_path)
         print(f"Saved {output_path}")
+
 
 if __name__ == "__main__":
     main()

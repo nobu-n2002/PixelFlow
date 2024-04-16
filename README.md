@@ -60,32 +60,26 @@ For comprehensive insights into the proposed methodology and findings presented 
     cd PixelFlow
     ```
 
-4. Make the initialization script executable:
+4. Build all sources:
 
     ```bash
-    chmod +x project.sh
+    make build
     ```
 
-5. Run the initialization script:
+5. Create working directory:
 
     ```bash
-    sh project.sh -b -f your_project
+    make project f=<your_project_name>
     ```
 
-    The usage of project.sh is as follows:
+    The usage of `make` is as follows:
 
-    ```bash
-   Usage: project.sh [OPTIONS] <folder_name>
-   Options:
-     -b                 Build all source codes
-     -f <folder_name>   Create a new folder with the specified name
-     -h                 Display Usage
-    ```
-
-    If you only want to build the source code, please execute it with only the `-b` option as follows.
-
-    ```bash
-    sh project.sh -b
+    ```makefile
+    Usage: make [OPTIONS]
+    options
+    build                    Build all source codes
+    project f=<folder_name>  Create a new folder with the specified name
+    help                     Display Usage
     ```
 
 6. Check the `bin` Folder:
@@ -109,7 +103,7 @@ For comprehensive insights into the proposed methodology and findings presented 
    - Open a terminal or command prompt and run the following command to confirm the existence of the `controlDict.txt` file in the `config` folder.
 
      ```bash
-     cd your_project
+     cd projects/<folder_name>
      ls config
      ```
 
@@ -164,10 +158,10 @@ For comprehensive insights into the proposed methodology and findings presented 
 1. Run the simulation script:
 
     ```bash
-    sh run.sh
+    make run
     ```
 
-   You will be prompted to select an executable file. If you are using OpenMP parallelization code, please enter the number of OpenMP parallel threads.
+   You will be prompted to select an executable file. If you are using OpenMP parallelization code, please set parallel threads in `config/omp_config.conf`.
 
    ```bash
    Available executable files:
@@ -175,18 +169,18 @@ For comprehensive insights into the proposed methodology and findings presented 
    1: ibm2_omp
    2: ibm3_air_condition_omp
    3: ibm3_omp
-   Enter the number of the executable file to run: 1
-   Enter the number of threads to use for execution:3
+   Using OMP_NUM_THREADS = ${$OMP_NUM_THREADS}
    Running ibm2_omp...
    ```
 
-2. The processes are output to `runlog_*.txt` files inside the `logs/` folder.
-   Additionally, execution information is output to `process.txt` inside the `logs/` folder.
+2. The processes are output to `runlog_*.log` files inside the `logs/` folder.
+   Additionally, execution information is output to `process.log` inside the `logs/` folder.
 3. The output in the `{output_folder}/` directory.
-4. If you need to forcibly stop the computation midway, you can check the running processes by entering ps in the terminal. For example, the output might look like this:
+
+4. If you need to forcibly terminate the process during computation, please enter the following command. You will receive the process ID and a confirmation message. Input 'yes' followed by pressing enter to forcibly terminate the running process.
 
     ```bash
-    sh quit.sh
+    make quit
     ```
 
 ## Configuring Simulations
@@ -233,6 +227,6 @@ Adjust these parameters according to your simulation requirements. The `output_f
 
 ## References
 
-[1] Oshima.N, A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Journal of Fluid Science and Technology. Vol.18, No.4 (2023)
+[1] Oshima, N., A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Journal of Fluid Science and Technology. Vol.18, No.4 (2023)
 
-[2] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers, <http://hdl.handle.net/2115/89344>
+[2] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers, http://hdl.handle.net/2115/89344

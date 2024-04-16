@@ -1,4 +1,20 @@
-bin/**/*
+# executable files
+bin/
 
-src/lib/*.mod
-src/*.mod
+# library files
+lib/gf/
+lib/nvf/
+
+# build files
+build/
+
+# module files
+src/omp_parallel/*.mod
+src/omp_parallel/lib/*.mod
+src/oacc_parallel/*.mod
+src/oacc_parallel/lib/*.mod
+src/solver/*.mod
+src/beta/*.mod
+
+# projects
+projects/

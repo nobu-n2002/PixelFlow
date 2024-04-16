@@ -9,6 +9,7 @@ def write_porosity_2d (data, filename='porosity.csv'):
             for i in range(1, m+1):
                 file.write(f"{int(i)}, {int(j)}, 1, {(data[i-1, j-1]):.10f}\n")
 
+
 def write_porosity_3d (data,filename='porosity.csv'):
     # Write porosity distribution
     m, n, l = data.shape
