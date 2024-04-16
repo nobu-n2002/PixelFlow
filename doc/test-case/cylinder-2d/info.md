@@ -24,23 +24,22 @@ To ensure that the application is set up correctly, you can run a provided test 
 2. The source code is built from the following script.
 
     ```bash
-    sh project.sh -b
+    make testproject
     ```
 
-3. Unzip the cylinder-2d.zip file located in the test folder and move it to cylinder-2d/.:
+3. Move to the project directory cylinder-2d.
 
     ```bash
-    unzip test/cylinder-2d.zip
-    cd cylinder-2d
+    cd projects/cylinder-2d
     ```
 
 4. Run the simulation script:
 
    ```bash
-   sh run.sh
+   make run
    ```
 
-   You will be prompted to select an executable file, so please choose either ibm2_drag_omp or ibm2_uniform_omp. Then enter the number of OpenMP parallel threads.
+   You will be prompted to select an executable file, so please choose either ibm2_uniform_omp. 
 
    ```text
    Available executable files:
@@ -49,7 +48,7 @@ To ensure that the application is set up correctly, you can run a provided test 
    2: ibm3_air_condition_omp
    3: ibm3_uniform_omp
    Enter the number of the executable file to run: 1
-   Enter the number of threads to use for execution:3
+   Using OMP_NUM_THREADS = ${$OMP_NUM_THREADS}
    Running ibm2_omp...
    ```
 
@@ -78,9 +77,8 @@ To ensure that the application is set up correctly, you can run a provided test 
    │   └── surface_profile.dat
    ├── logs
    │   ├── process.txt
-   │   └── runlog_2024.02.25-23.46.31.txt
-   ├── quit.sh
-   └── run.sh
+   │   └── runlog_************.txt
+   └── Makefile
    ```
 
 7. To confirm the successful execution of the 2D test case, follow these steps:
