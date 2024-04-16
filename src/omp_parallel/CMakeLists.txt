@@ -4,7 +4,7 @@
 # Set directories
 set(BIN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bin)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIB_DIR ${SRC_DIR}/../../lib/modules)
+set(LIB_DIR ${SRC_DIR}/../../lib/gf/modules)
 
 # Compile library files
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/mainFileLists.txt MAIN_FILES)

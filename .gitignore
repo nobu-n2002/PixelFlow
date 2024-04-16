@@ -2,16 +2,17 @@
 bin/
 
 # library files
-lib/*.a
-lib/modules/
+lib/gf/
+lib/nvf/
 
 # build files
 build/
 
 # module files
-src/lib/*.mod
 src/omp_parallel/*.mod
+src/omp_parallel/lib/*.mod
 src/oacc_parallel/*.mod
+src/oacc_parallel/lib/*.mod
 src/solver/*.mod
 src/beta/*.mod
 

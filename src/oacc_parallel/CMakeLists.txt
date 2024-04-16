@@ -4,10 +4,11 @@
 # Set directories
 set(BIN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bin)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIB_DIR ${SRC_DIR}/../../lib/modules)
+set(LIB_DIR ${SRC_DIR}/../../lib/nvf/modules)
 
 # Compile library files
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/mainFileLists.txt MAIN_FILES)
+set(CMAKE_Fortran_COMPILER "nvfortran")
 
 # Compile each source file separately
 foreach(SRC ${MAIN_FILES})
@@ -29,7 +30,13 @@ foreach(SRC ${MAIN_FILES})
     # Link libraries
     target_link_libraries(${EXE_NAME}
         PRIVATE
-        ibm_library
+        ibm_library_nvf
+        -acc
+    )
+
+    # Add compiler flags for OpenACC support
+    target_compile_options(${EXE_NAME} PRIVATE
+        $<$<COMPILE_LANGUAGE:Fortran>:-acc=gpu -gpu=ccall -Minfo=accel -mcmodel=medium>
     )
 
 endforeach()

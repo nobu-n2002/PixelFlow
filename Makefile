@@ -56,8 +56,13 @@ project:
 help:
 	$(MAKE) display_usage
 
-test-2d:
+testproject:
 	$(MAKE) build
 	$(MAKE) project f=cylinder-2d
 	${RM} $(PROJECT_DIR)/cylinder-2d/config/controlDict.txt
+	${RM} $(PROJECT_DIR)/cylinder-2d/config/omp_config
 	@unzip test/cylinder-2d.zip -d $(PROJECT_DIR)
+	$(MAKE) project f=stanford-dragon
+	${RM} $(PROJECT_DIR)/stanford-dragon/config/controlDict.txt
+	${RM} $(PROJECT_DIR)/stanford-dragon/config/omp_config
+	@unzip test/stanford-dragon.zip -d $(PROJECT_DIR)

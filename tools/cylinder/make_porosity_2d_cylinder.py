@@ -12,11 +12,6 @@ thickness = 1.5
 
 def main():
 
-    sns.set(font_scale=1.2)
-    sns.set_style('ticks')
-    plt.rcParams['font.family'] = 'serif'
-    plt.rcParams['font.serif'] = ['Times New Roman']
-
     output_folder = 'data'
     sdf = np.zeros((m,n))
 
@@ -38,25 +33,19 @@ def main():
     bw = sdf_to_bw(sdf)
     gray = sdf_to_gray(sdf)
 
-    heatmap(sdf, [0], 'sdf')
-    heatmap(gray, [-1], 'gray')
-    heatmap(bw,[0.5], 'bw')
-
     os.makedirs(output_folder, exist_ok=True)
 
     epsilon_func = porosity_func(sdf, thickness=thickness)
     kernel = create_tanh_kernel(thickness=thickness)
-    # heatmap_wire(kernel, 'tanh_kernel')
-    # heatmap_3d(kernel)
 
     epsilon_gray_blur = convolve(gray, kernel)
     epsilon_bw_blur = convolve(bw, kernel)
 
     # MSE
-    mse_gray = np.mean(np.abs(epsilon_gray_blur - epsilon_func)**2)
-    mse_bw = np.mean(np.abs(epsilon_bw_blur - epsilon_func)**2)
-    print(f'thickness & MSE (Gray Scale) & MES (Binary)\\\\')
-    print(f'{thickness:.2f} & {mse_gray:.4e} & {mse_bw:.4e}\\\\')
+    # mse_gray = np.mean(np.abs(epsilon_gray_blur - epsilon_func)**2)
+    # mse_bw = np.mean(np.abs(epsilon_bw_blur - epsilon_func)**2)
+    # print(f'thickness & MSE (Gray Scale) & MES (Binary)\\\\')
+    # print(f'{thickness:.2f} & {mse_gray:.4e} & {mse_bw:.4e}\\\\')
 
     # epsilon_gray_gauss = cv2.GaussianBlur(gray(sdf), ksize=(ksize, ksize), sigmaX=sigma)
     # epsilon_bw_gauss = cv2.GaussianBlur(gray(sdf), ksize=(ksize, ksize), sigmaX=sigma)
@@ -64,10 +53,9 @@ def main():
 
     write_porosity(epsilon_func, f'{output_folder}/func_{thickness}.csv')
     write_porosity(epsilon_gray_blur, f'{output_folder}/gray_blur_{thickness}.csv')
+    write_porosity(epsilon_bw_blur, f'{output_folder}/bw_blur_{thickness}.csv')
     # write_porosity(epsilon_gray_gauss, f'{output_folder}/gray_gauss_{thickness}.csv')
     # write_porosity(epsilon_bwgauss, f'{output_folder}/gray_gauss_{thickness}.csv')
-    write_porosity(epsilon_bw_blur, f'{output_folder}/bw_blur_{thickness}.csv')
-
 
 def heatmap(data, level, filename='sample'):
 
@@ -148,6 +136,7 @@ def sdf_to_gray(data):
                 data_gray[i, j] = 1.0
     return data_gray
 
+
 def create_tanh_kernel(thickness=2.5):
     size=int(thickness*14) + (1-int(thickness*14)%2)
     x = np.linspace(-size/2, size/2, size)
@@ -162,7 +151,6 @@ def heatmap_3d(data):
     import matplotlib.pyplot as plt
     import numpy as np
     from mpl_toolkits.mplot3d import Axes3D
-
 
     x, y = np.meshgrid(np.arange(data.shape[1]), np.arange(data.shape[0]))
     x = x.flatten()
@@ -179,6 +167,7 @@ def heatmap_3d(data):
     # ax.set_title('3D Heatmap using Matplotlib')
 
     plt.show()
+
 
 def write_porosity(data,filename='porosity.csv'):
     # Write porosity distribution

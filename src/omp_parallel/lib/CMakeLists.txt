@@ -3,7 +3,7 @@
 
 # Set directories
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIB_DIR ${SRC_DIR}/../../lib)
+set(LIB_DIR ${SRC_DIR}/../../../lib/gf)
 
 # Compile library files
 file(GLOB LIB_SOURCES *.f90)

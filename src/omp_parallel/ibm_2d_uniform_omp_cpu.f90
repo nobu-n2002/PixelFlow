@@ -6,6 +6,7 @@ program main
   use global_2d
   use valiables
   use output_2d
+  use grid_2d
   use utils
   implicit none
   integer:: istep
@@ -539,114 +540,6 @@ subroutine  boundary(p, u, v, xp, yp, width, height    &
   return
 end subroutine boundary
 !*****************************
-
-!******************
-subroutine  grid_conditions (&
-xp, yp, dx, dy, dt, xnue, xlambda, density, width, height, depth,&
-thickness, threshold, radius,&
-center_x, center_y, time,&
-inlet_velocity, AoA, porosity, m, n, istep_max,&
-csv_file)
-
-  use global_2d
-  implicit none
-  real,intent(inout),dimension(0:md):: xp
-  real,intent(inout),dimension(0:nd):: yp
-  real,intent(inout):: dx, dy, dt
-  real,intent(in):: xnue, xlambda, density, width, height, depth, time
-  real,intent(in):: inlet_velocity, AoA
-  real,intent(in):: thickness, threshold, radius, center_x, center_y
-  real,intent(inout),dimension(0:md,0:nd)::porosity
-  integer,intent(inout):: m, n
-  integer,intent(in):: istep_max
-  character(len = 50) :: csv_file
-  character(len = 50) :: output_folder
-
-  ! local variables
-  !real,dimension(0:md,0:nd)::	distance
-  real:: cfl_no, pecret_no, diffusion_factor, reynolds_no
-  integer:: i, j
-  integer:: x, y, z
-  real:: poro_val
-  ! --- 
-
-  ! read pixel data
-  open(52,file=csv_file, form='formatted')
-
-  read(52,*) m,n
-
-  do j = 1, n
-    do i = 1, m
-    read(52, *) x, y, z, poro_val
-    porosity(x, y) = max(poro_val, threshold)
-    end do
-  end do
-
-  close(52) 
-
-  !--- calc.
-  dx = width / real(m-1)
-  dy = height / real(n-1)
-  dt = time / real(istep_max)
-
-  cfl_no           = inlet_velocity * dt / dx
-  pecret_no        = inlet_velocity * dx / xnue
-  diffusion_factor = xnue * dt / dy / dy
-
-  reynolds_no      = inlet_velocity * radius * 2.0 / xnue
-
-  !----- check print out
-  write(*,*)
-  write(*,*) '# --- Grid conditions'
-  write(*,*) '# m, n =', m, n
-  write(*,*) '# dx, dy =', dx, dy
-  write(*,*) '# dt =', dt
-  write(*,*) '# cfl_no =', cfl_no
-  write(*,*) '# pecret_no =', pecret_no
-  write(*,*) '# diffusion_factor =', diffusion_factor
-  write(*,*) '# reynolds_no =', reynolds_no
-  write(*,*)
-
-  !$omp parallel private(i, j) &
-  !$omp & shared(m, n) &
-  !$omp & shared(porosity) &
-  !$omp & shared(xp, yp) &
-  !$omp & shared(dx, dy) &
-  !$omp & shared(width, height, center_x, center_y) &
-  !$omp & default(none)
-
-  !$omp do      
-  do i = 0, m+1
-  xp(i) = dx * real(i-1) - width*center_x
-  end do
-  !$omp end do
-
-  !$omp do      
-  do j = 0, n+1
-  yp(j) = dy * real(j-1) - height*center_y
-  end do
-  !$omp end do
-
-  ! default: outlet condtion in x-direction
-  !$omp do      
-  do j = 1, n+1
-  porosity(0,j) = porosity(1,j)
-  porosity(m+1,j) = porosity(m,j)
-  end do
-  !$omp end do
-
-  ! default: periodic condtion in y-direction
-  !$omp do      
-  do i = 0, m+1
-  porosity(i,0)   = porosity(i,n)
-  porosity(i,n+1) = porosity(i,1)
-  end do
-  !$omp end do
-  !$omp end parallel
-  ! ----------------
-  return
-end subroutine  grid_conditions
-!******************
 
 !******************
 subroutine  initial_conditions (p, u, v, xp, yp, width, height  &

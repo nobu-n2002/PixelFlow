@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is an implementation based on the paper "A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation" by Nobuyuki OSHIMA, published in the Mechanical Engineering Journal, Volume 18, Number 4 (2023).
+This is an implementation based on the paper "A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation" by Nobuyuki OSHIMA, published in Journal of Fluid Science and Technology, Volume 18, Number 4 (2023).
 
 This code deals with incompressible fluids and implements the collocated grid MAC method using a regular orthogonal grid. It discretizes space using second-order central differencing and time using a first-order explicit Euler method. For pressure calculation, it implements the Red-Black SOR method.
 
@@ -161,7 +161,7 @@ For comprehensive insights into the proposed methodology and findings presented 
     make run
     ```
 
-   You will be prompted to select an executable file. If you are using OpenMP parallelization code, please enter the number of OpenMP parallel threads.
+   You will be prompted to select an executable file. If you are using OpenMP parallelization code, please set parallel threads in `config/omp_config.conf`.
 
    ```bash
    Available executable files:
@@ -169,14 +169,15 @@ For comprehensive insights into the proposed methodology and findings presented 
    1: ibm2_omp
    2: ibm3_air_condition_omp
    3: ibm3_omp
-   Enter the number of the executable file to run: 1
+   Using OMP_NUM_THREADS = ${$OMP_NUM_THREADS}
    Running ibm2_omp...
    ```
 
 2. The processes are output to `runlog_*.log` files inside the `logs/` folder.
    Additionally, execution information is output to `process.log` inside the `logs/` folder.
 3. The output in the `{output_folder}/` directory.
-4. If you need to forcibly stop the computation midway, you can check the running processes by entering ps in the terminal. For example, the output might look like this:
+
+4. If you need to forcibly terminate the process during computation, please enter the following command. You will receive the process ID and a confirmation message. Input 'yes' followed by pressing enter to forcibly terminate the running process.
 
     ```bash
     make quit
@@ -226,6 +227,6 @@ Adjust these parameters according to your simulation requirements. The `output_f
 
 ## References
 
-[1] Oshima.N, A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Mechanical Engineering Journal. Vol.18, No.4 (2023)
+[1] Oshima, N., A Novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Journal of Fluid Science and Technology. Vol.18, No.4 (2023)
 
-[2] 大島, 流れの数値解析:固体境界が埋め込まれた改良ナビエ・ストークス方程式の解法, 北海道大学学術成果コレクション(HUBCAP), 資源タイプsoftware (2023), [Link](http://hdl.handle.net/2115/89344)
+[2] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers, http://hdl.handle.net/2115/89344

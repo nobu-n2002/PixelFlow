@@ -36,8 +36,8 @@ run:
 			counter=$$((counter+1)); \
 		fi; \
 	done;\
-	if [ -f "$(CONFIG_DIR)/omp_config" ]; then \
-		export $$(cat "$(CONFIG_DIR)/omp_config" | xargs); \
+	if [ -f "$(CONFIG_DIR)/omp_config.conf" ]; then \
+		export $$(cat "$(CONFIG_DIR)/omp_config.conf" | xargs); \
 	else \
 		echo "$(shell tput setaf 1)Error:$(shell tput sgr0) $(CONFIG_DIR)/omp_config not found. Exiting."; \
 		exit 1; \

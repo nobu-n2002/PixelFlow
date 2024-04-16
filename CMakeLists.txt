@@ -20,16 +20,15 @@ option(with_openacc "Enable OpenACC" ON)
 
 set(DCMAKE_BUILD_TYPE "Release")
 
-# Build libraries
-add_subdirectory(src/lib)
-
 if(with_openmp)
     find_package(OpenMP REQUIRED)
     if(OpenMP_FOUND)
         message(STATUS "OpenMP found")
+        # Build libraries
+        add_subdirectory(src/omp_parallel/lib)
         # Build source file with omp
         add_subdirectory(src/omp_parallel)
-        # add_subdirectory(src/test)
+        # add_subdirectory(src/dev)
     else()
         message(FATAL_ERROR "OpenMP not found")
     endif()
@@ -46,6 +45,8 @@ if(with_openacc)
         check_language(CUDA)
         if(CMAKE_CUDA_COMPILER)
             message(STATUS "nvfortran found.")
+            # Build libraries
+            add_subdirectory(src/oacc_parallel/lib)
             # Build source file with oacc
             add_subdirectory(src/oacc_parallel)
         else()
