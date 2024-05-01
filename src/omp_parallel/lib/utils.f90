@@ -1,5 +1,4 @@
-! utils.f90
-! link: global.f90
+! src/omp_parallel/lib/utils.f90
 
 module utils
     implicit none
