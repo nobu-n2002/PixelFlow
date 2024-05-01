@@ -54,7 +54,7 @@ project:
 
 # Target for displaying usage
 help:
-	$(MAKE) display_usage
+	$(MAKE) usage
 
 testproject:
 	$(MAKE) build
