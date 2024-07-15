@@ -44,6 +44,26 @@ For comprehensive insights into the proposed methodology and findings presented 
   - [Running a Test Case](#running-a-test-case)
   - [References](#references)
 
+
+## Requirements
+
+To build and run this project, you will need the following tools and libraries installed on a Linux environment:
+
+- **CMake**: A cross-platform build system generator.
+- **Make**: A build automation tool.
+- **GCC**: The GNU Compiler Collection, including the C compiler.
+- **G++**: The GNU C++ Compiler.
+- **GFortran**: The GNU Fortran Compiler.
+
+### Prerequisites
+
+Make sure you have the required tools and libraries installed. You can install them using the package manager of your Linux distribution. For example, on Debian-based systems like Ubuntu, you can use `apt-get`:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y cmake make gcc g++ gfortran
+```
+
 ## Installation
 
 1. Open a terminal and navigate to the desired working directory.
