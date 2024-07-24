@@ -68,7 +68,7 @@ program main
                         , inlet_velocity, outlet_pressure, AoA, porosity, m, n)
   call  boundary (p, u, v, xp, yp, width, height            &
                         , inlet_velocity, outlet_pressure, AoA, porosity, m, n)
-
+  call output_paraview_temp_2d (p, u, v, porosity, xp, yp, m, n, inlet_velocity, 0, output_folder)
   ! print initial conditions
   ! call  output_solution (p, u, v, m, n)
 
@@ -210,14 +210,14 @@ subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlambda, density, he
   ! --- diffusion_y
   u(i,j)=u(i,j) +dt*xnue*(u_old(i,j+1)-2.*u_old(i,j)+u_old(i,j-1))/dy/dy
   ! --- divergence term
-  u(i,j)=u(i,j) +dt*(xnue + xlambda)*(div(i+1,j)-div(i-1,j))/dx*.5
+  u(i,j)=u(i,j) +dt*(xnue + xlambda/density)*(div(i+1,j)-div(i-1,j))/dx*.5
   ! --- additional terms by porosity profile
   u(i,j)=u(i,j)							&
       +dt*( ( (u_old(i+1,j)-u_old(i-1,j))/dx*.5+(u_old(i+1,j)-u_old(i-1,j))/dx*.5) &
               *xnue*(porosity(i+1,j)-porosity(i-1,j))/dx*.5                        &
             +( (u_old(i,j+1)-u_old(i,j-1))/dy*.5+(v_old(i+1,j)-v_old(i-1,j))/dx*.5) &
               *xnue*(porosity(i,j+1)-porosity(i,j-1))/dy*.5                        &
-            + div(i,j)*(porosity(i+1,j)-porosity(i-1,j))/dx*0.5*xlambda             &
+            + div(i,j)*(porosity(i+1,j)-porosity(i-1,j))/dx*0.5*xlambda/density             &
             )/porosity(i,j)
   ! --- force on wall
   if (nonslip) then
@@ -243,14 +243,14 @@ subroutine  solve_p (p, u, v, u_old, v_old, porosity, xnue, xlambda, density, he
   ! --- diffusion_y
   v(i,j)=v(i,j) +dt*xnue*(v_old(i,j+1)-2.*v_old(i,j)+v_old(i,j-1))/dy/dy
   ! --- divergence term
-  v(i,j)=v(i,j) +dt*(xnue + xlambda)*(div(i,j+1)-div(i,j-1))/dy*.5
+  v(i,j)=v(i,j) +dt*(xnue + xlambda/density)*(div(i,j+1)-div(i,j-1))/dy*.5
   ! --- additional terms by porosity profile
   v(i,j)=v(i,j)							&
       +dt*( ( (v_old(i+1,j)-v_old(i-1,j))/dx*.5+(u_old(i,j+1)-u_old(i,j-1))/dy*.5) &
               *xnue*(porosity(i+1,j)-porosity(i-1,j))/dx*.5                        &
             +( (v_old(i,j+1)-v_old(i,j-1))/dy*.5+(v_old(i,j+1)-v_old(i,j-1))/dy*.5) &
               *xnue*(porosity(i,j+1)-porosity(i,j-1))/dy*.5                        &
-            + div(i,j)*(porosity(i,j+1)-porosity(i,j-1))/dy*0.5*xlambda       &
+            + div(i,j)*(porosity(i,j+1)-porosity(i,j-1))/dy*0.5*xlambda/density       &
             )/porosity(i,j)
   ! --- force on wall
   if (nonslip) then
