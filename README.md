@@ -1,3 +1,7 @@
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/nobu-n2002/PixelFlow)
+![Static Badge](https://img.shields.io/badge/Ubuntu_v20.04-supported-blue)
+
+
 # PixelFlow
 
 ## Overview
