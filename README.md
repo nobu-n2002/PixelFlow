@@ -6,7 +6,7 @@
 
 ## Overview
 
-This implementation is based on the [papers](#Reference).
+This implementation is based on the [papers](#References).
 
 This code deals with incompressible fluids and implements the collocated grid Marker-and-Cell (MAC) method using a regular orthogonal grid. It discretizes space using second-order central differencing and time using a first-order explicit Euler method. For pressure calculation, it uses the Red-Black Successive Over-Relaxation (SOR) method.
 
