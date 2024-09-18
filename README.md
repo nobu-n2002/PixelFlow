@@ -234,7 +234,7 @@ Adjust these parameters according to your simulation requirements. The `output_f
 
 ## References
 
-[1] Oshima, N., A novel approach for wall-boundary immersed flow simulation: proposal of modified Navier-Stokes equation, Journal of Fluid Science and Technology. Vol.18, No.4 (2023), 
+[1] Oshima, N., A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation), Journal of Fluid Science and Technology. Vol.18, No.4 (2023), 
 https://doi.org/10.1299/jfst.2023jfst0034
 
 [2] Oshima, N., A novel approach for wall-boundary immersed flow simulation (part 2: modeling of wall shear stress), Journal of Fluid Science and Technology. Vol.19, No.3 (2024), https://doi.org/10.1299/jfst.2024jfst0026
