@@ -6,37 +6,9 @@
 
 ## Overview
 
-This implementation is based on the paper 'A Novel Approach for Wall-Boundary Immersed Flow Simulation: Proposal of Modified Navier-Stokes Equation' by Nobuyuki OSHIMA, published in the Journal of Fluid Science and Technology, Volume 18, Number 4 (2023).
+This implementation is based on the [papers](#Reference).
 
 This code deals with incompressible fluids and implements the collocated grid Marker-and-Cell (MAC) method using a regular orthogonal grid. It discretizes space using second-order central differencing and time using a first-order explicit Euler method. For pressure calculation, it uses the Red-Black Successive Over-Relaxation (SOR) method.
-
-## Citing A novel approach for wall-boundary immersed flow simulation
-
-For comprehensive insights into the proposed methodology and findings presented in our work, please consider referencing the [paper](https://doi.org/10.1299/jfst.2023jfst0034):
-
-```bibtex
-@article{Oshima_2023_MEJ,
-  title={A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation)},
-  author={Nobuyuki OSHIMA},
-  journal={Journal of Fluid Science and Technology},
-  volume={18},
-  number={4},
-  pages={23-00192},
-  year={2023},
-  doi={10.1299/jfst.2023jfst0034}
-}
-
-@article{Oshima_2024_MEJ,
-  title={A novel approach for wall-boundary immersed flow simulation (part 2: modeling of wall shear stress)},
-  author={Nobuyuki OSHIMA},
-  journal={Journal of Fluid Science and Technology},
-  volume={19},
-  number={3},
-  pages={24-00062},
-  year={2024},
-  doi={10.1299/jfst.2024jfst0026}
-}
-```
 
 ## Table of Contents
 
