@@ -242,4 +242,4 @@ https://doi.org/10.1299/jfst.2023jfst0034
 
 [3] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers, http://hdl.handle.net/2115/89344
 
-[4] Nakamichi, N., Younghwa, C., Oshima, N., Image-data-driven simulation of fluid dynamics (proposal and evaluation), Mechanical Engineering Journal, Advance online publication, https://doi.org/10.1299/mej.24-00196
+[4] Nakamichi, N., Younghwa, C. and Oshima, N., Image-data-driven simulation of fluid dynamics (proposal and evaluation), Mechanical Engineering Journal, Advance online publication, https://doi.org/10.1299/mej.24-00196
