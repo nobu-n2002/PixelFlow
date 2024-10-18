@@ -14,8 +14,9 @@ This code deals with incompressible fluids and implements the collocated grid Ma
 
 - [PixelFlow](#pixelflow)
   - [Overview](#overview)
-  - [Citing A Novel approach for wall-boundary immersed flow simulation](#citing-a-novel-approach-for-wall-boundary-immersed-flow-simulation)
   - [Table of Contents](#table-of-contents)
+  - [Requirements](#requirements)
+    - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Getting Started](#getting-started)
     - [Setting up the Environment](#setting-up-the-environment)
@@ -196,14 +197,14 @@ The `config/controlDict.txt` file contains parameters that define the properties
 
 ### &physical Section
 
-- **`xnue`**: Kinematic viscosity of the fluid in [m^2/s].
-- **`xlambda`**: Second Kinematic viscosity of the fluid in[m^2/s].
-- **`density`**: Density of the fluid in [kg/m^3].
-- **`width`**, **`height`**, **`depth`**: The simulation domain in [m].
-- **`time`**: Total simulation time in [s].
-- **`inlet_velocity`**: Inlet velocity of the fluid in [m/s].
-- **`outlet_pressure`**: Outlet pressure in [gauge].
-- **`AoA`**: Angle of Attack in [degree].
+- **`xnue`**: Kinematic viscosity of the fluid, $\nu = (\mu/\rho$) [m^2/s].
+- **`xlambda`**: Second Kinematic viscosity of the fluid, ($\lambda/\rho$) [m^2/s].
+- **`density`**: Density of the fluid, $\rho$ [kg/m^3].
+- **`width`**, **`height`**, **`depth`**: The simulation domain, $X, Y, Z$ [m].
+- **`time`**: Total simulation time, $t$ [s].
+- **`inlet_velocity`**: Inlet velocity of the fluid, $U_{in}$ [m/s].
+- **`outlet_pressure`**: Outlet pressure, $P_{out}$ [Pa].
+- **`AoA`**: Angle of Attack, $\alpha$ [degree].
 
 ### &file_control Section
 
@@ -215,7 +216,7 @@ The `config/controlDict.txt` file contains parameters that define the properties
 
 ### &porosity_control Section
 
-- **`thickness`**: Thickness of boundary region ($\Delta/dx$).
+- **`thickness`**: Thickness of boundary region, $\Delta^*(=\Delta/dx$).
 
 ### &calculation_method Section
 
@@ -240,3 +241,5 @@ https://doi.org/10.1299/jfst.2023jfst0034
 [2] Oshima, N., A novel approach for wall-boundary immersed flow simulation (part 2: modeling of wall shear stress), Journal of Fluid Science and Technology. Vol.19, No.3 (2024), https://doi.org/10.1299/jfst.2024jfst0026
 
 [3] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers, http://hdl.handle.net/2115/89344
+
+[4] Nakamichi, N., Younghwa, C., Oshima, N., Image-data-driven simulation of fluid dynamics (proposal and evaluation), Mechanical Engineering Journal, Advance online publication, https://doi.org/10.1299/mej.24-00196

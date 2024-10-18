@@ -298,7 +298,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
         u(i,j,k)=u(i,j,k) + dt*xnue*(u_old(i,j,k+1)-2.*u_old(i,j,k)+u_old(i,j,k-1))/dz/dz
                             
         !-- divergence term 
-        u(i,j,k)=u(i,j,k) + dt*(xnue + xlambda/density)*(div(i+1,j,k)-div(i-1,j,k))/dx*0.5
+        u(i,j,k)=u(i,j,k) + dt*(xnue + xlambda)*(div(i+1,j,k)-div(i-1,j,k))/dx*0.5
     
         !-- additional terms by porosity profile
         u(i,j,k) = u(i,j,k) &
@@ -309,7 +309,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                             *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5                             &
                           +((u_old(i,j,k+1)-u_old(i,j,k-1))/dz*0.5+(w_old(i+1,j,k)-w_old(i-1,j,k))/dx*0.5) &
                             *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                             &
-                          + div(i,j,k)*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5*xlambda/density                 &
+                          + div(i,j,k)*(porosity(i+1,j,k)-porosity(i-1,j,k))/dx*0.5*xlambda                 &
                      )/porosity(i,j,k)
   
         !-- force on wall
@@ -351,7 +351,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
         v(i,j,k)=v(i,j,k) + dt*xnue*(v_old(i,j,k+1)-2.*v_old(i,j,k)+v_old(i,j,k-1))/dz/dz
 
         !-- divergence term
-        v(i,j,k)=v(i,j,k) + dt*(xnue + xlambda/density)*(div(i,j+1,k)-div(i,j-1,k))/dy*0.5
+        v(i,j,k)=v(i,j,k) + dt*(xnue + xlambda)*(div(i,j+1,k)-div(i,j-1,k))/dy*0.5
 
         !-- additional terms by porosity profile
         v(i,j,k) = v(i,j,k) &
@@ -362,7 +362,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                            *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5                            &
                          +((v_old(i,j,k+1)-v_old(i,j,k-1))/dz*.5+(w_old(i,j+1,k)-w_old(i,j-1,k))/dy*0.5) &
                            *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                            &
-                         + div(i,j,k)*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5*xlambda/density                &
+                         + div(i,j,k)*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5*xlambda                &
                      )/porosity(i,j,k)
         !-- force on wall
         if(nonslip) then
@@ -404,7 +404,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
         w(i,j,k)=w(i,j,k) +dt*xnue*(w_old(i,j,k+1)-2.*w_old(i,j,k)+w_old(i,j,k-1))/dz/dz
 
         !-- divergence term
-        w(i,j,k)=w(i,j,k) +dt*(xnue + xlambda/density)*(div(i,j,k+1)-div(i,j,k-1))/dz*0.5
+        w(i,j,k)=w(i,j,k) +dt*(xnue + xlambda)*(div(i,j,k+1)-div(i,j,k-1))/dz*0.5
 
         !-- additional terms by porosity profile
         w(i,j,k) = w(i,j,k) &
@@ -415,7 +415,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
                             *xnue*(porosity(i,j+1,k)-porosity(i,j-1,k))/dy*0.5                             &
                           +((w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5+(w_old(i,j,k+1)-w_old(i,j,k-1))/dz*0.5) &
                             *xnue*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5                             &
-                          + div(i,j,k)*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5*xlambda/density                 &
+                          + div(i,j,k)*(porosity(i,j,k+1)-porosity(i,j,k-1))/dz*0.5*xlambda                 &
                      )/porosity(i,j,k)
         ! force on wall
         if (nonslip) then
