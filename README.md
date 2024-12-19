@@ -235,11 +235,11 @@ Adjust these parameters according to your simulation requirements. The `output_f
 
 ## References
 
-[1] Oshima, N., A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation), Journal of Fluid Science and Technology. Vol.18, No.4 (2023), 
+[1] Oshima, N., A novel approach for wall-boundary immersed flow simulation (proposal of modified Navier-Stokes equation), Journal of Fluid Science and Technology, Vol.18, No.4 (2023), 
 https://doi.org/10.1299/jfst.2023jfst0034
 
-[2] Oshima, N., A novel approach for wall-boundary immersed flow simulation (part 2: modeling of wall shear stress), Journal of Fluid Science and Technology. Vol.19, No.3 (2024), https://doi.org/10.1299/jfst.2024jfst0026
+[2] Oshima, N., A novel approach for wall-boundary immersed flow simulation (part 2: modeling of wall shear stress), Journal of Fluid Science and Technology, Vol.19, No.3 (2024), https://doi.org/10.1299/jfst.2024jfst0026
 
-[3] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers, http://hdl.handle.net/2115/89344
+[3] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers. http://hdl.handle.net/2115/89344
 
-[4] Nakamichi, N., Cho, Y. and Oshima, N., Image-data-driven simulation of fluid dynamics (proposal and evaluation), Mechanical Engineering Journal, Advance online publication, https://doi.org/10.1299/mej.24-00196
+[4] Nakamichi, N., Cho, Y. and Oshima, N., Image-data-driven simulation of fluid dynamics (proposal and evaluation), Mechanical Engineering Journal, Vol.11, No.6 (2024), https://doi.org/10.1299/mej.24-00196
