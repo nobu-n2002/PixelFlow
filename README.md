@@ -243,3 +243,7 @@ https://doi.org/10.1299/jfst.2023jfst0034
 [3] Oshima, N., Program for flow simulation immersing wall boundary, Hokkaido university collection of scholarly and academic papers. http://hdl.handle.net/2115/89344
 
 [4] Nakamichi, N., Cho, Y. and Oshima, N., Image-data-driven simulation of fluid dynamics (proposal and evaluation), Mechanical Engineering Journal, Vol.11, No.6 (2024), https://doi.org/10.1299/mej.24-00196
+
+[5] Nakamichi, N., Laeron, E., Cho, Y. and Oshima, N., Moving boundary flow simulation using immersed boundary Navier–Stokes equation, The 38th Computational Fluid Dynamics Symposium (in Japanese), http://hdl.handle.net/2115/93762
+
+[6] Nakamichi, N., Cho, Y. and Oshima, N., Fluid Simulation directly Driven by 3D image data, The 52th Visualization Symposium (in Japanese), http://hdl.handle.net/2115/93764
