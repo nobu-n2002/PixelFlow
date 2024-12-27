@@ -66,3 +66,7 @@ testproject:
 	${RM} $(PROJECT_DIR)/stanford-dragon/config/controlDict.txt
 	${RM} $(PROJECT_DIR)/stanford-dragon/config/omp_config
 	@unzip test/stanford-dragon.zip -d $(PROJECT_DIR)
+	$(MAKE) project f=room
+	${RM} $(PROJECT_DIR)/room/config/controlDict.txt
+	${RM} $(PROJECT_DIR)/room/config/omp_config
+	@unzip test/room.zip -d $(PROJECT_DIR)
