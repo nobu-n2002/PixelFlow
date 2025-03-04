@@ -44,7 +44,7 @@ center_z = 0.500000
 /
 !********************************************
 &calculation_method
-!--- .ture.: No-slip cond. | .false.: Slip cond.
+!--- .true.: No-slip cond. | .false.: Slip cond.
 nonslip = .true.
 /
 !********************************************
