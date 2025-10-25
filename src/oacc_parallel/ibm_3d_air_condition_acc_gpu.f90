@@ -729,12 +729,7 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
         else
           ! --- outlet (p=outlet_pressure at i=m)
           bb(i,j,l) = bb(i,j,1) + at(i,j,l) * p(i,j,l+1)
-          ae(i,j,l) = 0.
-          aw(i,j,l) = 0.
-          an(i,j,l) = 0.
-          as(i,j,l) = 0.
           at(i,j,l) = 0.
-          ab(i,j,l) = 0.
           ! ---
         end if
       end if
@@ -760,11 +755,6 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
         else
           ! --- outlet (p=outlet_pressure at i=m)
           bb(i,j,1) = bb(i,j,1) + ab(i,j,1) * p(i,j,0)
-          ae(i,j,1) = 0.
-          aw(i,j,1) = 0.
-          an(i,j,1) = 0.
-          as(i,j,1) = 0.
-          at(i,j,1) = 0.
           ab(i,j,1) = 0.
           ! ---
         end if
@@ -792,11 +782,6 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
           ! --- outlet (p=outlet_pressure at i=m)
           bb(m,j,k) = bb(m,j,k) + ae(m,j,k) * p(m+1,j,k)
           ae(m,j,k) = 0.
-          aw(m,j,k) = 0.
-          an(m,j,k) = 0.
-          as(m,j,k) = 0.
-          at(m,j,k) = 0.
-          ab(m,j,k) = 0.
           ! ---
         end if
       end if
@@ -822,12 +807,7 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
         else
           ! --- outlet (p=outlet_pressure at i=1)
           bb(1,j,k) = bb(1,j,k) + aw(1,j,k) * p(0,j,k)
-          ae(1,j,k) = 0.
           aw(1,j,k) = 0.
-          an(1,j,k) = 0.
-          as(1,j,k) = 0.
-          at(1,j,k) = 0.
-          ab(1,j,k) = 0.
           ! ---
         end if
       end if
@@ -853,12 +833,7 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
         else
           ! --- outlet (p=outlet_pressure at j=n)
           bb(i,n,k) = bb(i,n,k) + an(i,n,k) * p(i,n+1,k)
-          ae(i,n,k) = 0.
-          aw(i,n,k) = 0.
           an(i,n,k) = 0.
-          as(i,n,k) = 0.
-          at(i,n,k) = 0.
-          ab(i,n,k) = 0.
         end if
       end if
     end do
@@ -880,12 +855,7 @@ subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height,
         else
         ! --- outlet (p=outlet_pressure at j=1)          
           bb(i,1,k) = bb(i,1,k) + as(i,1,k) * p(i,0,k)
-          ae(i,1,k) = 0.
-          aw(i,1,k) = 0.
-          an(i,1,k) = 0.
           as(i,1,k) = 0.
-          at(i,1,k) = 0.
-          ab(i,1,k) = 0.
         end if
       end if
     end do
@@ -1238,4 +1208,5 @@ subroutine  initial_conditions (p, u, v, w, xp, yp, zp, width, height, depth  &
   !$omp end parallel
   return
 end subroutine initial_conditions
+
 !******************
