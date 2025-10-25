@@ -415,7 +415,7 @@ subroutine  solve_p (p, u, v, w, u_old, v_old, w_old, porosity, &
   
   !$omp end parallel
 
-  call boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
+  call boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
   
   call solve_matrix_vec_oacc (p, ap, ae, aw, an, as, at, ab, bb, &
   m, n, l, iter_max, relux_factor)
@@ -713,7 +713,7 @@ end subroutine solve_matrix_vec_oacc
 ! !******************
 
 !******************
-subroutine  boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
+subroutine  boundary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height, yp)
 
   use global_3d
   implicit none
@@ -747,18 +747,13 @@ subroutine  boundrary_matrix (p, ap, ae, aw, an, as, at, ab, bb, m, n, l, height
     do j = 1, n
       bb(m,j,k) = bb(m,j,k)+ae(m,j,k)*p(m+1,j,k)
       ae(m,j,k) = 0.
-      aw(m,j,k) = 0.
-      an(m,j,k) = 0.
-      as(m,j,k) = 0.
-      at(m,j,k) = 0.
-      ab(m,j,k) = 0.
     end do
   end do
   !$omp end do
 
   !$omp end parallel
   
-end subroutine  boundrary_matrix
+end subroutine  boundary_matrix
 !******************
 
 !  conditions  
